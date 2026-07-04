@@ -105,9 +105,15 @@ const bottomLeft = (name: string, content: string, capture = false) =>
 const albumLine = (m: TrackMatch): string =>
   m.album ? `${m.album}${m.year ? ` (${m.year})` : ''}` : m.year ? `(${m.year})` : ''
 
-/** Title (caps) / artist / album(year) as up-to-3 lines. */
-const trackLines = (m: TrackMatch): string =>
-  [m.title.toUpperCase(), m.artist, albumLine(m)].filter(Boolean).join('\n')
+/**
+ * Title (caps) / artist / album(year) as up-to-3 lines, each truncated to the
+ * container's inner pixel width so a long value can't overflow or wrap.
+ */
+const trackLines = (m: TrackMatch, maxPx: number): string =>
+  [m.title.toUpperCase(), m.artist, albumLine(m)]
+    .filter(Boolean)
+    .map((line) => pxTruncate(line, maxPx))
+    .join('\n')
 
 /** One-line history row: "▓ TITLE • Artist • Album (year)". */
 const historyRow = (m: TrackMatch, innerW: number): string => {
@@ -235,9 +241,10 @@ export async function showResult(match: TrackMatch): Promise<void> {
     containerName: 'art',
   })
   const rerun = 'Rerun ●'
+  const infoW = CANVAS_W - 2 * PAD
   await commit({
     text: [
-      textC('info', { x: PAD, y: 146, w: CANVAS_W - 2 * PAD, h: 110, content: trackLines(match), capture: true }),
+      textC('info', { x: PAD, y: 146, w: infoW, h: 110, content: trackLines(match, infoW), capture: true }),
       bottomLeft('goback', '●● Go Back'),
       textC('rerun', {
         x: CANVAS_W - Math.ceil(getTextWidth(rerun)) - PAD,
@@ -308,7 +315,8 @@ export async function showHistoryDetail(match: TrackMatch): Promise<void> {
   nextId = 1
   const artSize = 130
   const box = textC('box', { x: 4, y: 4, w: CANVAS_W - 8, h: 190, content: '', border: 1, radius: 6 })
-  const info = textC('info', { x: 170, y: 24, w: CANVAS_W - 170 - 20, h: 120, content: trackLines(match), capture: true })
+  const infoW = CANVAS_W - 170 - 20
+  const info = textC('info', { x: 170, y: 24, w: infoW, h: 120, content: trackLines(match, infoW), capture: true })
   const date = textC('date', { x: PAD, y: 205, w: CANVAS_W - 2 * PAD, content: `Identified on [ ${formatDate(match.identifiedAt)} ]` })
   const art = new ImageContainerProperty({
     xPosition: 20,
