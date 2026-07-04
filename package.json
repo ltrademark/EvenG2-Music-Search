@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "simulate": "evenhub-simulator http://localhost:5173 --automation-port 9898",
+    "qr": "evenhub qr --uri http://192.168.1.9:5173",
+    "package": "yarn build && evenhub pack app.json dist -o muse.ehpk"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.11",
