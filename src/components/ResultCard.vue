@@ -1,8 +1,9 @@
 <template>
   <div class="card">
+    <img v-if="match.coverArtUrl" class="card__art" :src="match.coverArtUrl" alt="" @error="artFailed = true" v-show="!artFailed" />
     <div class="card__title">{{ match.title }}</div>
     <div class="card__artist">{{ match.artist }}</div>
-    <div v-if="match.album" class="card__album">{{ match.album }}</div>
+    <div v-if="albumLine" class="card__album">{{ albumLine }}</div>
     <div class="card__meta">
       <span class="card__score">{{ scorePct }}% match</span>
     </div>
@@ -18,9 +19,21 @@ export default defineComponent({
   props: {
     match: { type: Object as PropType<TrackMatch>, required: true },
   },
+  data() {
+    return { artFailed: false }
+  },
   computed: {
     scorePct(): number {
       return Math.round((this.match.score ?? 0) * 100)
+    },
+    albumLine(): string {
+      if (!this.match.album) return this.match.year ? `(${this.match.year})` : ''
+      return this.match.year ? `${this.match.album} (${this.match.year})` : this.match.album
+    },
+  },
+  watch: {
+    'match.coverArtUrl'() {
+      this.artFailed = false
     },
   },
 })
@@ -34,6 +47,14 @@ export default defineComponent({
   background: var(--surface);
   border: 1px solid var(--border);
   text-align: center;
+}
+
+.card__art {
+  width: 130px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
 }
 
 .card__title {

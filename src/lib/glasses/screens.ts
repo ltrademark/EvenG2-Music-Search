@@ -1,80 +1,335 @@
 import {
   CreateStartUpPageContainer,
+  ImageContainerProperty,
+  ListContainerProperty,
+  ListItemContainerProperty,
+  RebuildPageContainer,
   StartUpPageCreateResult,
   TextContainerProperty,
   TextContainerUpgrade,
 } from '@evenrealities/even_hub_sdk'
+import { getTextWidth, pxTruncate } from '@evenrealities/pretext'
 import { getBridge } from '../bridge'
+import { loadImagePng, placeholderPng, pushImage } from './image'
+import * as wave from './wave'
 import type { TrackMatch } from '../types'
 
-// The G2 canvas. We use a single full-screen text container that both renders
-// content and captures input events, and update it in place (flicker-free).
-const CANVAS_WIDTH = 576
-const CANVAS_HEIGHT = 288
-const MAIN_ID = 1
-const MAIN_NAME = 'main'
+const CANVAS_W = 576
+const CANVAS_H = 288
+const LINE_H = 27
+const PAD = 8
+
+// ---- Page commit -----------------------------------------------------------
+
+interface PageSpec {
+  text?: TextContainerProperty[]
+  images?: ImageContainerProperty[]
+  list?: ListContainerProperty[]
+}
 
 let created = false
 
-/** Create the start-up page once. Must run before `audioControl`. */
-export async function initGlasses(initialContent: string): Promise<void> {
-  if (created) return
+/** Commit a page: create once at startup, rebuild thereafter. */
+async function commit(spec: PageSpec): Promise<void> {
   const bridge = await getBridge()
+  const total =
+    (spec.text?.length ?? 0) + (spec.images?.length ?? 0) + (spec.list?.length ?? 0)
 
-  const main = new TextContainerProperty({
-    xPosition: 0,
-    yPosition: 0,
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
-    borderWidth: 0,
-    borderColor: 5,
-    paddingLength: 8,
-    containerID: MAIN_ID,
-    containerName: MAIN_NAME,
-    content: initialContent,
-    isEventCapture: 1,
+  if (!created) {
+    const result = await bridge.createStartUpPageContainer(
+      new CreateStartUpPageContainer({
+        containerTotalNum: total,
+        textObject: spec.text,
+        imageObject: spec.images,
+        listObject: spec.list,
+      }),
+    )
+    if (result !== StartUpPageCreateResult.success) {
+      throw new Error(`Failed to create glasses page (code ${result}).`)
+    }
+    created = true
+  } else {
+    await bridge.rebuildPageContainer(
+      new RebuildPageContainer({
+        containerTotalNum: total,
+        textObject: spec.text,
+        imageObject: spec.images,
+        listObject: spec.list,
+      }),
+    )
+  }
+}
+
+// ---- Text container helpers -------------------------------------------------
+
+interface TextOpts {
+  x: number
+  y: number
+  w: number
+  h?: number
+  content: string
+  capture?: boolean
+  border?: number
+  radius?: number
+}
+
+let nextId = 1
+const textC = (name: string, o: TextOpts) =>
+  new TextContainerProperty({
+    xPosition: o.x,
+    yPosition: o.y,
+    width: o.w,
+    height: o.h ?? LINE_H,
+    borderWidth: o.border ?? 0,
+    borderColor: 12,
+    borderRadius: o.radius ?? 0,
+    paddingLength: o.border ? 6 : 0,
+    containerID: nextId++,
+    containerName: name,
+    content: o.content,
+    isEventCapture: o.capture ? 1 : 0,
   })
 
-  const result = await bridge.createStartUpPageContainer(
-    new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [main] }),
-  )
-  if (result !== StartUpPageCreateResult.success) {
-    throw new Error(`Failed to create glasses page (code ${result}).`)
-  }
-  created = true
+/** A horizontally-centered single line of text. */
+const centered = (name: string, content: string, y: number, capture = false) => {
+  const w = Math.ceil(getTextWidth(content)) + 8
+  return textC(name, { x: Math.max(0, Math.round((CANVAS_W - w) / 2)), y, w, content, capture })
 }
 
-/** Update the glasses text in place. */
-export async function setGlassesText(content: string): Promise<void> {
+/** Bottom-left hint, e.g. "●● Go Back" / "●● Cancel". */
+const bottomLeft = (name: string, content: string, capture = false) =>
+  textC(name, { x: PAD, y: CANVAS_H - LINE_H - 4, w: 320, content, capture })
+
+// ---- Track formatting -------------------------------------------------------
+
+const albumLine = (m: TrackMatch): string =>
+  m.album ? `${m.album}${m.year ? ` (${m.year})` : ''}` : m.year ? `(${m.year})` : ''
+
+/** Title (caps) / artist / album(year) as up-to-3 lines. */
+const trackLines = (m: TrackMatch): string =>
+  [m.title.toUpperCase(), m.artist, albumLine(m)].filter(Boolean).join('\n')
+
+/** One-line history row: "▓ TITLE • Artist • Album (year)". */
+const historyRow = (m: TrackMatch, innerW: number): string => {
+  const parts = [m.title.toUpperCase(), m.artist, albumLine(m)].filter(Boolean)
+  // Trim to fit the row width, then hard-cap at 63 *bytes* (SDK list limit).
+  return byteTruncate(pxTruncate(`▓ ${parts.join('  •  ')}`, innerW), 63)
+}
+
+/** Truncate to at most maxBytes of UTF-8 without splitting a character. */
+const byteTruncate = (s: string, maxBytes: number): string => {
+  const enc = new TextEncoder()
+  if (enc.encode(s).length <= maxBytes) return s
+  let out = ''
+  let bytes = 0
+  for (const ch of s) {
+    const b = enc.encode(ch).length
+    if (bytes + b > maxBytes) break
+    out += ch
+    bytes += b
+  }
+  return out
+}
+
+const formatDate = (ms?: number): string => {
+  if (!ms) return '—'
+  const d = new Date(ms)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${mm}/${dd}/${d.getFullYear()}`
+}
+
+// ---- Screens ----------------------------------------------------------------
+
+/** #1 Splash. First page → createStartUpPageContainer. */
+export async function showSplash(): Promise<void> {
+  nextId = 1
+  const iconW = 96
+  const icon = new ImageContainerProperty({
+    xPosition: Math.round((CANVAS_W - iconW) / 2),
+    yPosition: 44,
+    width: iconW,
+    height: iconW,
+    containerID: 100,
+    containerName: 'icon',
+  })
+  await commit({
+    text: [
+      centered('title', 'Music Search', 160, true),
+      centered('init', 'Initializing...', 250),
+    ],
+    images: [icon],
+  })
+  const png = (await loadImagePng('/icon_large.png', iconW, iconW, { dither: false })) ??
+    (await placeholderPng(iconW, iconW))
+  await pushImage(100, 'icon', png)
+}
+
+/** #2 / #5 Home menu (Start Search / View History). */
+export async function showMenu(): Promise<void> {
+  nextId = 1
+  const menu = new ListContainerProperty({
+    xPosition: PAD,
+    yPosition: 16,
+    width: 320,
+    height: 100,
+    borderWidth: 0,
+    paddingLength: 4,
+    containerID: nextId++,
+    containerName: 'menu',
+    isEventCapture: 1,
+    itemContainer: new ListItemContainerProperty({
+      itemCount: 2,
+      itemWidth: 0,
+      isItemSelectBorderEn: 1,
+      itemName: ['Start Search', 'View History'],
+    }),
+  })
+  await commit({ list: [menu] })
+}
+
+/** #3 Listening — status + animated wave + cancel hint. */
+export async function showListening(): Promise<void> {
+  nextId = 1
+  const waveW = wave.WAVE_W
+  const waveImg = new ImageContainerProperty({
+    xPosition: 190,
+    yPosition: PAD,
+    width: waveW,
+    height: wave.WAVE_H,
+    containerID: 100,
+    containerName: 'wave',
+  })
+  await commit({
+    text: [
+      textC('status', { x: PAD, y: PAD, w: 170, content: '▶ Listening', capture: true }),
+      bottomLeft('cancel', '●● Cancel'),
+    ],
+    images: [waveImg],
+  })
+  // Fire-and-forget the animation loop; stopped when leaving this screen.
+  void wave.start(100, 'wave')
+}
+
+/** Update the listening status line in place (e.g. "Searching..."). */
+export async function setListeningStatus(content: string): Promise<void> {
   const bridge = await getBridge()
   await bridge.textContainerUpgrade(
-    new TextContainerUpgrade({
-      containerID: MAIN_ID,
-      containerName: MAIN_NAME,
-      content: content.slice(0, 2000),
-    }),
+    new TextContainerUpgrade({ containerID: 1, containerName: 'status', content }),
   )
 }
 
-// ---- Per-phase glasses copy -------------------------------------------------
+/** Stop the listening wave animation. */
+export const stopWave = () => wave.stop()
 
-export const glassesIdle = () => 'MUSE\n\nTap to identify\nthe music playing'
+/** #4 Result — album art + track info + Go Back / Rerun. */
+export async function showResult(match: TrackMatch): Promise<void> {
+  nextId = 1
+  const artSize = 130
+  const art = new ImageContainerProperty({
+    xPosition: PAD,
+    yPosition: PAD,
+    width: artSize,
+    height: artSize,
+    containerID: 100,
+    containerName: 'art',
+  })
+  const rerun = 'Rerun ●'
+  await commit({
+    text: [
+      textC('info', { x: PAD, y: 146, w: CANVAS_W - 2 * PAD, h: 110, content: trackLines(match), capture: true }),
+      bottomLeft('goback', '●● Go Back'),
+      textC('rerun', {
+        x: CANVAS_W - Math.ceil(getTextWidth(rerun)) - PAD,
+        y: CANVAS_H - LINE_H - 4,
+        w: Math.ceil(getTextWidth(rerun)) + 8,
+        content: rerun,
+      }),
+    ],
+    images: [art],
+  })
+  await renderArt(match, 100, 'art', artSize)
+}
 
-export const glassesListening = (remainingSec: number) =>
-  `Listening...\n\n${'●'.repeat(Math.max(0, Math.min(10, Math.ceil(remainingSec))))}\n${Math.ceil(
-    remainingSec,
-  )}s`
+/** #4 (no result / error) — simple retry prompt. */
+export async function showNoMatch(message = 'no results found.'): Promise<void> {
+  nextId = 1
+  await commit({
+    text: [
+      textC('msg', {
+        x: PAD,
+        y: 110,
+        w: CANVAS_W - 2 * PAD,
+        h: 60,
+        content: `${message}\nTap once to try again`,
+        capture: true,
+      }),
+    ],
+  })
+}
 
-export const glassesIdentifying = () => 'Identifying...'
+/** #6 History list. */
+export async function showHistoryList(items: TrackMatch[]): Promise<void> {
+  nextId = 1
+  const innerW = CANVAS_W - 2 * PAD - 24
+  const list = new ListContainerProperty({
+    xPosition: PAD,
+    yPosition: PAD,
+    width: CANVAS_W - 2 * PAD,
+    height: 232,
+    borderWidth: 0,
+    paddingLength: 4,
+    containerID: nextId++,
+    containerName: 'history',
+    isEventCapture: 1,
+    itemContainer: new ListItemContainerProperty({
+      itemCount: Math.min(20, items.length),
+      itemWidth: 0,
+      isItemSelectBorderEn: 1,
+      itemName: items.slice(0, 20).map((m) => historyRow(m, innerW)),
+    }),
+  })
+  await commit({ list: [list], text: [bottomLeft('goback', '●● Go Back')] })
+}
 
-export const glassesResult = (m: TrackMatch) =>
-  [m.title, m.artist, m.album ?? '', '', 'Tap to identify again'].filter(Boolean).join('\n')
+/** #6 (empty) History with no entries. */
+export async function showHistoryEmpty(): Promise<void> {
+  nextId = 1
+  await commit({
+    text: [
+      textC('msg', { x: PAD, y: 24, w: CANVAS_W - 2 * PAD, h: 60, content: 'History\n\nNo songs yet', capture: true }),
+      bottomLeft('goback', '●● Go Back'),
+    ],
+  })
+}
 
-export const glassesNoMatch = () => 'No match found\n\nTap to try again'
+/** #7 History detail — boxed art + info, date, Go Back. */
+export async function showHistoryDetail(match: TrackMatch): Promise<void> {
+  nextId = 1
+  const artSize = 130
+  const box = textC('box', { x: 4, y: 4, w: CANVAS_W - 8, h: 190, content: '', border: 1, radius: 6 })
+  const info = textC('info', { x: 170, y: 24, w: CANVAS_W - 170 - 20, h: 120, content: trackLines(match), capture: true })
+  const date = textC('date', { x: PAD, y: 205, w: CANVAS_W - 2 * PAD, content: `Identified on [ ${formatDate(match.identifiedAt)} ]` })
+  const art = new ImageContainerProperty({
+    xPosition: 20,
+    yPosition: 24,
+    width: artSize,
+    height: artSize,
+    containerID: 100,
+    containerName: 'art',
+  })
+  await commit({ text: [box, info, date, bottomLeft('goback', '●● Go Back')], images: [art] })
+  await renderArt(match, 100, 'art', artSize)
+}
 
-export const glassesError = (message: string) => `Error\n\n${message}\n\nTap to try again`
+// ---- Album art helper -------------------------------------------------------
 
-export const glassesHistory = (history: TrackMatch[]) =>
-  history.length === 0
-    ? 'History\n\nNo songs yet'
-    : 'History\n\n' + history.map((m, i) => `${i + 1}. ${m.title} - ${m.artist}`).join('\n')
+async function renderArt(
+  match: TrackMatch,
+  containerID: number,
+  name: string,
+  size: number,
+): Promise<void> {
+  const png = match.coverArtUrl ? await loadImagePng(match.coverArtUrl, size, size) : null
+  await pushImage(containerID, name, png ?? (await placeholderPng(size, size)))
+}

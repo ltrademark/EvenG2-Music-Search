@@ -44,24 +44,30 @@ import SettingsView from './views/SettingsView.vue'
 import { getBridge } from './lib/bridge'
 import { captureAudio } from './lib/audio/capture'
 import { computeFingerprint } from './lib/audio/fingerprint'
-import { lookupFingerprint } from './lib/api/acoustid'
+import { lookupFingerprint, coverArtUrl } from './lib/api/acoustid'
+import { fetchYear } from './lib/api/musicbrainz'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from './lib/storage/settings'
 import { loadHistory, addToHistory, clearHistory } from './lib/storage/history'
 import {
-  initGlasses,
-  setGlassesText,
-  glassesIdle,
-  glassesListening,
-  glassesIdentifying,
-  glassesResult,
-  glassesNoMatch,
-  glassesError,
+  showSplash,
+  showMenu,
+  showListening,
+  setListeningStatus,
+  stopWave,
+  showResult,
+  showNoMatch,
+  showHistoryList,
+  showHistoryEmpty,
+  showHistoryDetail,
 } from './lib/glasses/screens'
-import type { AppPhase, PhoneView, TrackMatch } from './lib/types'
+import type { AppPhase, GlassesScreen, PhoneView, TrackMatch } from './lib/types'
+
+const SPLASH_MS = 2000
 
 interface Data {
   view: PhoneView
   phase: AppPhase
+  glassesScreen: GlassesScreen
   remaining: number
   match: TrackMatch | null
   errorMessage: string
@@ -69,7 +75,7 @@ interface Data {
   settings: Settings
   captureAbort: AbortController | null
   unsubscribe: (() => void) | null
-  lastGlassesSecond: number
+  searchCancelled: boolean
 }
 
 export default defineComponent({
@@ -79,6 +85,7 @@ export default defineComponent({
     return {
       view: 'identify',
       phase: 'idle',
+      glassesScreen: 'splash',
       remaining: 0,
       match: null,
       errorMessage: '',
@@ -86,7 +93,7 @@ export default defineComponent({
       settings: { ...DEFAULT_SETTINGS },
       captureAbort: null,
       unsubscribe: null,
-      lastGlassesSecond: -1,
+      searchCancelled: false,
     }
   },
   computed: {
@@ -108,113 +115,206 @@ export default defineComponent({
     this.settings = await loadSettings()
     this.history = await loadHistory()
 
-    await initGlasses(glassesIdle())
+    // Splash is the first page (createStartUpPageContainer), then the menu.
+    await showSplash()
     const bridge = await getBridge()
     this.unsubscribe = bridge.onEvenHubEvent(this.onGlassesEvent)
+
+    // Dev-only: `VITE_DEMO=1 yarn dev` seeds sample data to verify the
+    // result/history layouts in the simulator (no mic/key there). Never in prod.
+    // `VITE_DEMO=listening` shows the listening screen + wave.
+    if (import.meta.env.DEV && import.meta.env.VITE_DEMO) {
+      if (import.meta.env.VITE_DEMO === 'splash') {
+        // Splash already rendered above; just don't advance to the menu.
+      } else if (import.meta.env.VITE_DEMO === 'listening') {
+        this.glassesScreen = 'listening'
+        await showListening()
+      } else {
+        await this.seedDemo()
+      }
+      return
+    }
+    setTimeout(() => void this.gotoMenu(), SPLASH_MS)
   },
   beforeUnmount() {
     this.captureAbort?.abort()
+    stopWave()
     this.unsubscribe?.()
   },
   methods: {
-    /** Run the full listen → fingerprint → lookup pipeline. */
+    /** Run the full listen → fingerprint → lookup pipeline (drives both surfaces). */
     async identify() {
       if (this.busy) return
       this.match = null
       this.errorMessage = ''
       this.view = 'identify'
+      this.searchCancelled = false
 
       try {
-        this.setPhase('listening')
+        this.phase = 'listening'
+        this.glassesScreen = 'listening'
+        await showListening()
+
         this.captureAbort = new AbortController()
         const audio = await captureAudio({
           durationSec: this.settings.captureSeconds,
           source: this.settings.micSource,
           signal: this.captureAbort.signal,
-          onProgress: (_elapsed, remaining) => this.onListenProgress(remaining),
+          onProgress: (_elapsed, remaining) => (this.remaining = remaining),
         })
+        if (this.searchCancelled) return
 
-        this.setPhase('identifying')
+        stopWave()
+        this.phase = 'identifying'
+        await setListeningStatus('Searching...')
+
         const fingerprint = await computeFingerprint(audio)
         const match = await lookupFingerprint(fingerprint, this.settings.acoustIdKey)
 
         if (match) {
+          if (match.releaseGroupId) match.year = await fetchYear(match.releaseGroupId)
           match.identifiedAt = Date.now()
           this.match = match
           this.history = await addToHistory(match)
-          this.setPhase('result')
+          this.phase = 'result'
+          this.glassesScreen = 'result'
+          await showResult(match)
         } else {
-          this.setPhase('nomatch')
+          this.phase = 'nomatch'
+          this.glassesScreen = 'nomatch'
+          await showNoMatch()
         }
       } catch (err) {
+        stopWave()
         this.errorMessage = (err as Error).message || 'Identification failed.'
-        this.setPhase('error')
+        this.phase = 'error'
+        this.glassesScreen = 'nomatch'
+        await showNoMatch(this.errorMessage)
       } finally {
         this.captureAbort = null
       }
     },
 
-    onListenProgress(remaining: number) {
-      this.remaining = remaining
-      // Mirror to glasses only when the whole-second countdown changes.
-      const second = Math.ceil(remaining)
-      if (second !== this.lastGlassesSecond) {
-        this.lastGlassesSecond = second
-        void setGlassesText(glassesListening(remaining))
+    // ---- Glasses navigation -------------------------------------------------
+
+    async gotoMenu() {
+      stopWave()
+      this.glassesScreen = 'menu'
+      await showMenu()
+    },
+
+    async gotoHistoryList() {
+      this.history = await loadHistory()
+      if (this.history.length === 0) {
+        this.glassesScreen = 'historyEmpty'
+        await showHistoryEmpty()
+      } else {
+        this.glassesScreen = 'historyList'
+        await showHistoryList(this.history)
       }
     },
 
-    /** Update pipeline phase and mirror the matching screen to the glasses. */
-    setPhase(phase: AppPhase) {
-      this.phase = phase
-      switch (phase) {
-        case 'listening':
-          this.lastGlassesSecond = -1
-          void setGlassesText(glassesListening(this.settings.captureSeconds))
-          break
-        case 'identifying':
-          void setGlassesText(glassesIdentifying())
-          break
-        case 'result':
-          if (this.match) void setGlassesText(glassesResult(this.match))
-          break
-        case 'nomatch':
-          void setGlassesText(glassesNoMatch())
-          break
-        case 'error':
-          void setGlassesText(glassesError(this.errorMessage))
-          break
-        default:
-          void setGlassesText(glassesIdle())
-      }
+    async openHistoryDetail(index: number) {
+      const item = this.history[index]
+      if (!item) return
+      this.glassesScreen = 'historyDetail'
+      await showHistoryDetail(item)
     },
+
+    cancelSearch() {
+      this.searchCancelled = true
+      this.captureAbort?.abort()
+      this.phase = 'idle'
+      void this.gotoMenu()
+    },
+
+    // ---- Glasses input routing ---------------------------------------------
 
     onGlassesEvent(event: EvenHubEvent) {
+      // List single-press → selection on the active list screen.
+      if (event.listEvent) {
+        this.onGlassesSelect(event.listEvent.currentSelectItemIndex ?? 0)
+        return
+      }
+
       const sys = event.sysEvent
       if (!sys) return
-
-      // Protobuf zero-values arrive as undefined, so treat that as a click.
       const type = sys.eventType ?? OsEventTypeList.CLICK_EVENT
 
-      switch (type) {
-        case OsEventTypeList.CLICK_EVENT:
-          if (!this.busy) void this.identify()
+      // Lifecycle: backgrounded mid-capture → stop listening.
+      if (type === OsEventTypeList.FOREGROUND_EXIT_EVENT || type === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
+        this.captureAbort?.abort()
+        return
+      }
+
+      const isDouble =
+        type === OsEventTypeList.DOUBLE_CLICK_EVENT || type === OsEventTypeList.SYSTEM_EXIT_EVENT
+      const isSingle = type === OsEventTypeList.CLICK_EVENT
+
+      switch (this.glassesScreen) {
+        case 'listening':
+          if (isDouble) this.cancelSearch()
           break
-        case OsEventTypeList.DOUBLE_CLICK_EVENT:
-        case OsEventTypeList.SYSTEM_EXIT_EVENT:
-          void this.exit()
+        case 'result':
+        case 'nomatch':
+          if (isSingle) void this.identify()
+          else if (isDouble) void this.gotoMenu()
           break
-        case OsEventTypeList.FOREGROUND_EXIT_EVENT:
-        case OsEventTypeList.ABNORMAL_EXIT_EVENT:
-          // Backgrounded mid-capture: stop the mic so it doesn't keep listening.
-          this.captureAbort?.abort()
+        case 'historyDetail':
+          if (isDouble) void this.gotoHistoryList()
           break
+        case 'historyList':
+        case 'historyEmpty':
+          if (isDouble) void this.gotoMenu()
+          break
+        case 'menu':
+          if (isDouble) void this.exit()
+          break
+      }
+    },
+
+    onGlassesSelect(index: number) {
+      if (this.glassesScreen === 'menu') {
+        if (index === 0) void this.identify()
+        else void this.gotoHistoryList()
+      } else if (this.glassesScreen === 'historyList') {
+        void this.openHistoryDetail(index)
       }
     },
 
     async exit() {
       const bridge = await getBridge()
       await bridge.shutDownPageContainer(1)
+    },
+
+    /** Dev-only: seed sample history + show a result, to verify layouts. */
+    async seedDemo() {
+      const samples: TrackMatch[] = [
+        {
+          acoustId: 'demo-1',
+          releaseGroupId: '1b022e01-4da6-387b-8658-8678046e4cef',
+          title: "It's Been a Long Time",
+          artist: 'Rakim',
+          album: 'The 18th Letter',
+          year: '1997',
+          coverArtUrl: coverArtUrl('1b022e01-4da6-387b-8658-8678046e4cef'),
+          score: 0.94,
+          identifiedAt: Date.UTC(2026, 4, 12),
+        },
+        {
+          acoustId: 'demo-2',
+          title: 'The Jawn',
+          artist: 'Jerri',
+          album: 'The Jawn',
+          year: '2026',
+          score: 0.8,
+          identifiedAt: Date.UTC(2026, 0, 3),
+        },
+      ]
+      for (const s of [...samples].reverse()) this.history = await addToHistory(s)
+      this.match = samples[0]
+      this.glassesScreen = 'result'
+      await showResult(samples[0])
     },
 
     async onSaveSettings(next: Settings) {

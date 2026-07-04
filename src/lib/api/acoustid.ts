@@ -73,18 +73,26 @@ function pickBestMatch(results: AcoustIdResult[]): TrackMatch | null {
     const recording = result.recordings?.find((r) => r.title && r.artists?.length)
     if (!recording) continue
 
+    const releaseGroup = recording.releasegroups?.[0]
     return {
       acoustId: result.id,
       recordingId: recording.id,
+      releaseGroupId: releaseGroup?.id,
       title: recording.title!,
       artist: (recording.artists ?? [])
         .map((a) => a.name)
         .filter(Boolean)
         .join(', '),
-      album: recording.releasegroups?.[0]?.title,
+      album: releaseGroup?.title,
+      coverArtUrl: releaseGroup?.id ? coverArtUrl(releaseGroup.id) : undefined,
       score: result.score,
     }
   }
 
   return null
+}
+
+/** Cover Art Archive front cover (250px) for a release group. */
+export function coverArtUrl(releaseGroupId: string): string {
+  return `https://coverartarchive.org/release-group/${releaseGroupId}/front-250`
 }

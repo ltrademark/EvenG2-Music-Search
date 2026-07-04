@@ -13,8 +13,14 @@
     },
     {
       "name": "network",
-      "desc": "Sends an audio fingerprint to AcoustID to identify the song.",
-      "whitelist": ["https://api.acoustid.org", "https://musicbrainz.org"]
+      "desc": "Sends an audio fingerprint to AcoustID and fetches album art.",
+      "whitelist": [
+        "https://api.acoustid.org",
+        "https://musicbrainz.org",
+        "https://coverartarchive.org",
+        "https://archive.org",
+        "https://*.us.archive.org"
+      ]
     }
   ],
   "supported_languages": ["en"]
