@@ -1,0 +1,40 @@
+// Theme tokens live as CSS custom properties so they can be read/overridden at
+// runtime. SCSS is used for structure (nesting, partials, mixins) — not for
+// storing these values.
+:root {
+  // Brand
+  --brand-color: #1155ee;
+  --brand-color-hover: #2e6bf2;
+  --brand-color-ink: #ffffff;
+
+  // Surfaces
+  --bg: #0c0f16;
+  --surface: #151a24;
+  --surface-2: #1e2534;
+  --border: #2a3242;
+
+  // Text
+  --text: #eef1f7;
+  --text-muted: #9aa5b8;
+
+  // Feedback
+  --danger: #ee4455;
+  --success: #22c07a;
+
+  // Typography
+  --font-family: 'Space Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  // Spacing scale
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  // Radius
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+}
