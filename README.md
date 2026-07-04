@@ -1,4 +1,4 @@
-# Music ID — Even Realities G2
+# MUSE: Music Search — Even Realities G2
 
 Shazam-style music identification for the [Even Realities G2](https://hub.evenrealities.com)
 smart glasses. Tap the touchpad, the glasses listen for a few seconds, and the song
@@ -25,9 +25,9 @@ G2 mic (16kHz mono PCM) → Chromaprint fingerprint (WASM) → AcoustID → song
 ## Setup
 
 ```bash
-npm install
+yarn install
 cp .env.example .env   # optional: add a dev AcoustID key (VITE_ACOUSTID_KEY)
-npm run dev
+yarn dev
 ```
 
 Get a free AcoustID application key at
@@ -37,16 +37,16 @@ it at runtime in the app's **Settings** screen (stored on-device, never committe
 ## Develop
 
 ```bash
-npm run dev                                    # Vite dev server (http://localhost:5173)
-npx evenhub-simulator http://localhost:5173    # desktop G2 simulator
-npx evenhub qr                                 # QR to sideload onto real glasses
+yarn dev                                       # Vite dev server (http://localhost:5173)
+yarn evenhub-simulator http://localhost:5173   # desktop G2 simulator
+yarn evenhub qr                                # QR to sideload onto real glasses
 ```
 
 ## Build & package
 
 ```bash
-npm run build                                  # type-check + bundle to dist/
-npx evenhub pack app.json dist -o music-id.ehpk
+yarn build                                     # type-check + bundle to dist/
+yarn evenhub pack app.json dist -o muse.ehpk
 ```
 
 ## How it works

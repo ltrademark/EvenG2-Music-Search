@@ -58,7 +58,7 @@ export async function setGlassesText(content: string): Promise<void> {
 
 // ---- Per-phase glasses copy -------------------------------------------------
 
-export const glassesIdle = () => 'Music ID\n\nTap to identify\nthe music playing'
+export const glassesIdle = () => 'MUSE\n\nTap to identify\nthe music playing'
 
 export const glassesListening = (remainingSec: number) =>
   `Listening...\n\n${'●'.repeat(Math.max(0, Math.min(10, Math.ceil(remainingSec))))}\n${Math.ceil(

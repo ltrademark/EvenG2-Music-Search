@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app__bar">
-      <h1 class="app__brand">Music ID</h1>
+      <h1 class="app__brand">MUSE</h1>
     </header>
 
     <p v-if="needsKey" class="app__banner" @click="view = 'settings'">
