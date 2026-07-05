@@ -42,7 +42,6 @@ import DebugView from './views/DebugView.vue'
 import { getBridge } from './lib/bridge'
 import { captureAudio } from './lib/audio/capture'
 import { recognize } from './lib/api/recognition'
-import { coverArtUrl } from './lib/api/acoustid'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from './lib/storage/settings'
 import { loadHistory, addToHistory, clearHistory } from './lib/storage/history'
 import {
@@ -317,7 +316,8 @@ export default defineComponent({
           artist: 'Rakim',
           album: 'The 18th Letter',
           year: '1997',
-          coverArtUrl: coverArtUrl('1b022e01-4da6-387b-8658-8678046e4cef'),
+          coverArtUrl:
+            'https://coverartarchive.org/release-group/1b022e01-4da6-387b-8658-8678046e4cef/front-250',
           score: 0.94,
           identifiedAt: Date.UTC(2026, 4, 12),
         },

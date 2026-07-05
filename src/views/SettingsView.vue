@@ -3,22 +3,6 @@
     <h2 class="settings__title">Settings</h2>
 
     <label class="field">
-      <span class="field__label">AcoustID API key</span>
-      <input
-        v-model.trim="form.acoustIdKey"
-        class="field__input"
-        type="text"
-        autocomplete="off"
-        autocapitalize="off"
-        spellcheck="false"
-        placeholder="Paste your AcoustID application key"
-      />
-      <span class="field__help">
-        Free key from acoustid.org/new-application. Stored only on this device.
-      </span>
-    </label>
-
-    <label class="field">
       <span class="field__label">Listen duration: {{ form.captureSeconds }}s</span>
       <input
         v-model.number="form.captureSeconds"
@@ -77,7 +61,6 @@ export default defineComponent({
   computed: {
     dirty(): boolean {
       return (
-        this.form.acoustIdKey !== this.settings.acoustIdKey ||
         this.form.captureSeconds !== this.settings.captureSeconds ||
         this.form.micSource !== this.settings.micSource
       )
