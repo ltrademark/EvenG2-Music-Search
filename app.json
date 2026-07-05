@@ -13,13 +13,10 @@
     },
     {
       "name": "network",
-      "desc": "Sends an audio fingerprint to AcoustID and fetches album art.",
+      "desc": "Sends an audio signature to identify the song and fetches album art.",
       "whitelist": [
-        "https://api.acoustid.org",
-        "https://musicbrainz.org",
-        "https://coverartarchive.org",
-        "https://archive.org",
-        "https://*.us.archive.org"
+        "https://szm-prx.ltrademark.workers.dev",
+        "https://*.mzstatic.com"
       ]
     }
   ],

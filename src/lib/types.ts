@@ -4,7 +4,16 @@
 export type AppPhase = 'idle' | 'listening' | 'identifying' | 'result' | 'nomatch' | 'error'
 
 /** Which phone-side screen is showing. */
-export type PhoneView = 'identify' | 'history' | 'settings'
+export type PhoneView = 'identify' | 'history' | 'settings' | 'debug'
+
+/** One line in the debug log shown on the phone Debug tab. */
+export interface DebugEntry {
+  time: number
+  label: string
+  detail?: string
+  /** true = healthy, false = problem, undefined = neutral/info. */
+  ok?: boolean
+}
 
 /** Which screen the glasses are showing (independent of the phone view). */
 export type GlassesScreen =
@@ -38,7 +47,7 @@ export interface TrackMatch {
   identifiedAt?: number
 }
 
-/** Captured audio ready for fingerprinting. */
+/** Captured audio ready for fingerprinting, plus mic-health stats. */
 export interface CapturedAudio {
   /** Interleaved 16-bit PCM samples (mono → single channel). */
   samples: Int16Array
@@ -48,4 +57,12 @@ export interface CapturedAudio {
   channels: number
   /** Capture length in seconds. */
   durationSec: number
+  /** Number of PCM chunks received from the mic (0 = mic delivered nothing). */
+  chunkCount: number
+  /** Total bytes received. */
+  byteCount: number
+  /** Peak absolute sample amplitude, 0–32767 (near 0 = silence). */
+  peak: number
+  /** RMS amplitude (loudness proxy). */
+  rms: number
 }

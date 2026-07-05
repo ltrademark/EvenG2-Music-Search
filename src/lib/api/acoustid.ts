@@ -27,18 +27,24 @@ interface AcoustIdResponse {
 
 export class AcoustIdError extends Error {}
 
+/** Outcome of a lookup, including counts for the debug panel. */
+export interface LookupResult {
+  match: TrackMatch | null
+  status: string
+  resultCount: number
+  bestScore: number | null
+}
+
 /**
- * Look up a fingerprint against AcoustID and return the best match, or `null`
- * if nothing was recognized.
- *
- * AcoustID sends `Access-Control-Allow-Origin: *`, so this runs directly from
- * the webview with no proxy (verified during setup).
+ * Look up a fingerprint against AcoustID and return the best match plus raw
+ * counts. AcoustID sends `Access-Control-Allow-Origin: *`, so this runs
+ * directly from the webview with no proxy (verified during setup).
  */
 export async function lookupFingerprint(
   fp: Fingerprint,
   clientKey: string,
   signal?: AbortSignal,
-): Promise<TrackMatch | null> {
+): Promise<LookupResult> {
   if (!clientKey) {
     throw new AcoustIdError('No AcoustID API key configured. Add one in Settings.')
   }
@@ -62,7 +68,13 @@ export async function lookupFingerprint(
     throw new AcoustIdError(data.error?.message ?? `AcoustID returned status "${data.status}".`)
   }
 
-  return pickBestMatch(data.results ?? [])
+  const results = data.results ?? []
+  return {
+    match: pickBestMatch(results),
+    status: data.status,
+    resultCount: results.length,
+    bestScore: results.length ? Math.max(...results.map((r) => r.score)) : null,
+  }
 }
 
 /** Choose the highest-scoring result that carries usable recording metadata. */

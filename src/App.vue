@@ -4,10 +4,6 @@
       <h1 class="app__brand">MUSE</h1>
     </header>
 
-    <p v-if="needsKey" class="app__banner" @click="view = 'settings'">
-      Add your free AcoustID key in Settings to start identifying →
-    </p>
-
     <main class="app__main">
       <IdentifyView
         v-if="view === 'identify'"
@@ -18,7 +14,8 @@
         @identify="identify"
       />
       <HistoryView v-else-if="view === 'history'" :history="history" @clear="onClearHistory" />
-      <SettingsView v-else :settings="settings" @save="onSaveSettings" />
+      <SettingsView v-else-if="view === 'settings'" :settings="settings" @save="onSaveSettings" />
+      <DebugView v-else :entries="debug" @clear="debug = []" />
     </main>
 
     <nav class="app__nav">
@@ -41,11 +38,11 @@ import { OsEventTypeList, type EvenHubEvent } from '@evenrealities/even_hub_sdk'
 import IdentifyView from './views/IdentifyView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
+import DebugView from './views/DebugView.vue'
 import { getBridge } from './lib/bridge'
 import { captureAudio } from './lib/audio/capture'
-import { computeFingerprint } from './lib/audio/fingerprint'
-import { lookupFingerprint, coverArtUrl } from './lib/api/acoustid'
-import { fetchYear } from './lib/api/musicbrainz'
+import { recognize } from './lib/api/recognition'
+import { coverArtUrl } from './lib/api/acoustid'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from './lib/storage/settings'
 import { loadHistory, addToHistory, clearHistory } from './lib/storage/history'
 import {
@@ -60,7 +57,7 @@ import {
   showHistoryEmpty,
   showHistoryDetail,
 } from './lib/glasses/screens'
-import type { AppPhase, GlassesScreen, PhoneView, TrackMatch } from './lib/types'
+import type { AppPhase, DebugEntry, GlassesScreen, PhoneView, TrackMatch } from './lib/types'
 
 const SPLASH_MS = 2000
 
@@ -76,11 +73,12 @@ interface Data {
   captureAbort: AbortController | null
   unsubscribe: (() => void) | null
   searchCancelled: boolean
+  debug: DebugEntry[]
 }
 
 export default defineComponent({
   name: 'App',
-  components: { IdentifyView, HistoryView, SettingsView },
+  components: { IdentifyView, HistoryView, SettingsView, DebugView },
   data(): Data {
     return {
       view: 'identify',
@@ -94,20 +92,19 @@ export default defineComponent({
       captureAbort: null,
       unsubscribe: null,
       searchCancelled: false,
+      debug: [],
     }
   },
   computed: {
     busy(): boolean {
       return this.phase === 'listening' || this.phase === 'identifying'
     },
-    needsKey(): boolean {
-      return !this.settings.acoustIdKey
-    },
     tabs(): { id: PhoneView; label: string }[] {
       return [
         { id: 'identify', label: 'Identify' },
         { id: 'history', label: 'History' },
         { id: 'settings', label: 'Settings' },
+        { id: 'debug', label: 'Debug' },
       ]
     },
   },
@@ -149,6 +146,7 @@ export default defineComponent({
       this.errorMessage = ''
       this.view = 'identify'
       this.searchCancelled = false
+      this.pushDebug(`Search started (${this.settings.captureSeconds}s, ${this.settings.micSource} mic)`)
 
       try {
         this.phase = 'listening'
@@ -162,17 +160,33 @@ export default defineComponent({
           signal: this.captureAbort.signal,
           onProgress: (_elapsed, remaining) => (this.remaining = remaining),
         })
-        if (this.searchCancelled) return
+        if (this.searchCancelled) {
+          this.pushDebug('Search cancelled')
+          return
+        }
+        // Mic health: peak near 0 (or 0 chunks) means no real audio was captured.
+        const micOk = audio.chunkCount > 0 && audio.peak >= 500
+        this.pushDebug(
+          `Mic: ${audio.chunkCount} chunks, ${audio.samples.length} samples, ${audio.durationSec.toFixed(1)}s`,
+          `peak ${audio.peak}/32767 · rms ${audio.rms}` +
+            (micOk ? '' : ' — very low/no signal; mic may not be capturing'),
+          micOk,
+        )
 
         stopWave()
         this.phase = 'identifying'
         await setListeningStatus('Searching...')
 
-        const fingerprint = await computeFingerprint(audio)
-        const match = await lookupFingerprint(fingerprint, this.settings.acoustIdKey)
+        this.pushDebug('Generating signature + querying...')
+        const result = await recognize(audio, this.captureAbort?.signal)
+        this.pushDebug(
+          `Recognition: ${result.matched ? 'match' : 'no match'} (sig ${result.sampleMs}ms)`,
+          result.match ? `${result.match.title} — ${result.match.artist}` : undefined,
+          result.matched,
+        )
+        const match = result.match
 
         if (match) {
-          if (match.releaseGroupId) match.year = await fetchYear(match.releaseGroupId)
           match.identifiedAt = Date.now()
           this.match = match
           this.history = await addToHistory(match)
@@ -187,12 +201,18 @@ export default defineComponent({
       } catch (err) {
         stopWave()
         this.errorMessage = (err as Error).message || 'Identification failed.'
+        this.pushDebug('Error', this.errorMessage, false)
         this.phase = 'error'
         this.glassesScreen = 'nomatch'
         await showNoMatch(this.errorMessage)
       } finally {
         this.captureAbort = null
       }
+    },
+
+    /** Append a line to the debug log (newest first, capped). */
+    pushDebug(label: string, detail?: string, ok?: boolean) {
+      this.debug = [{ time: Date.now(), label, detail, ok }, ...this.debug].slice(0, 80)
     },
 
     // ---- Glasses navigation -------------------------------------------------

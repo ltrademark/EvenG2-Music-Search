@@ -53,12 +53,31 @@ export async function captureAudio(opts: CaptureOptions): Promise<CapturedAudio>
     unsubscribe()
   }
 
+  const samples = mergePcmChunks(chunks, totalBytes)
+  const { peak, rms } = signalStats(samples)
   return {
-    samples: mergePcmChunks(chunks, totalBytes),
+    samples,
     sampleRate: SAMPLE_RATE,
     channels: CHANNELS,
     durationSec: totalBytes / BYTES_PER_SAMPLE / SAMPLE_RATE,
+    chunkCount: chunks.length,
+    byteCount: totalBytes,
+    peak,
+    rms,
   }
+}
+
+/** Peak absolute amplitude and RMS — used to tell silence from real audio. */
+function signalStats(samples: Int16Array): { peak: number; rms: number } {
+  let peak = 0
+  let sumSq = 0
+  for (let i = 0; i < samples.length; i++) {
+    const a = Math.abs(samples[i])
+    if (a > peak) peak = a
+    sumSq += samples[i] * samples[i]
+  }
+  const rms = samples.length ? Math.sqrt(sumSq / samples.length) : 0
+  return { peak, rms: Math.round(rms) }
 }
 
 /** Wait `durationSec`, emitting progress, resolving early if aborted. */
