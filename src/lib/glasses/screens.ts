@@ -115,11 +115,15 @@ const trackLines = (m: TrackMatch, maxPx: number): string =>
     .map((line) => pxTruncate(line, maxPx))
     .join('\n')
 
-/** One-line history row: "▓ TITLE • Artist • Album (year)". */
+/**
+ * One-line history row: "■ TITLE • Artist • Album (year)". The ■ prefix is a
+ * list-only art marker — it is NOT part of the stored track, so it never
+ * appears in the single-entry detail view.
+ */
 const historyRow = (m: TrackMatch, innerW: number): string => {
   const parts = [m.title.toUpperCase(), m.artist, albumLine(m)].filter(Boolean)
   // Trim to fit the row width, then hard-cap at 63 *bytes* (SDK list limit).
-  return byteTruncate(pxTruncate(`▓ ${parts.join('  •  ')}`, innerW), 63)
+  return byteTruncate(pxTruncate(`■ ${parts.join('  •  ')}`, innerW), 63)
 }
 
 /** Truncate to at most maxBytes of UTF-8 without splitting a character. */
@@ -276,24 +280,31 @@ export async function showNoMatch(message = 'no results found.'): Promise<void> 
 }
 
 /** #6 History list. */
+const LIST_ITEM_H = 40 // fixed per firmware
+const LIST_MAX_VISIBLE = 6 // rows that fit above the Go Back hint
+
 export async function showHistoryList(items: TrackMatch[]): Promise<void> {
   nextId = 1
   const innerW = CANVAS_W - 2 * PAD - 24
+  const rows = items.slice(0, 20)
+  // Size the container to the visible rows so the firmware doesn't
+  // vertically-center an underfilled list — this keeps rows pinned to the top.
+  const visible = Math.min(rows.length, LIST_MAX_VISIBLE)
   const list = new ListContainerProperty({
     xPosition: PAD,
     yPosition: PAD,
     width: CANVAS_W - 2 * PAD,
-    height: 232,
+    height: visible * LIST_ITEM_H,
     borderWidth: 0,
-    paddingLength: 4,
+    paddingLength: 0,
     containerID: nextId++,
     containerName: 'history',
     isEventCapture: 1,
     itemContainer: new ListItemContainerProperty({
-      itemCount: Math.min(20, items.length),
+      itemCount: rows.length,
       itemWidth: 0,
       isItemSelectBorderEn: 1,
-      itemName: items.slice(0, 20).map((m) => historyRow(m, innerW)),
+      itemName: rows.map((m) => historyRow(m, innerW)),
     }),
   })
   await commit({ list: [list], text: [bottomLeft('goback', '●● Go Back')] })
