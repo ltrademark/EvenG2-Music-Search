@@ -67,17 +67,16 @@ yarn install
 yarn dev                      # Vite dev server → http://localhost:5173
 ```
 
-### Recognition relay (required for recognition to work)
+### Recognition relay
 
 The recognition endpoint doesn't send CORS headers, and the webview enforces CORS, so requests
-are routed through a free Cloudflare Worker relay:
+are routed through a free Cloudflare Worker relay (in [`proxy/`](proxy/)). A working relay URL is
+**baked into `src/lib/api/recognition.ts`** (the `RECOGNITION_PROXY` constant), so no `.env` is
+required.
 
-1. Deploy the worker in [`proxy/`](proxy/) (see its header for steps) — free tier, no secrets.
-2. Create a `.env` with the worker URL:
-   ```
-   VITE_RECOGNITION_PROXY=https://<your-worker>.workers.dev
-   ```
-3. Add the worker host to `app.json`'s `network` whitelist.
+To point at your own relay: deploy the worker (see its header for steps), then either edit that
+constant or override it at build time with `VITE_RECOGNITION_PROXY=https://<your-worker>.workers.dev`.
+Add the relay host to `app.json`'s `network` whitelist.
 
 ### Run in the desktop simulator
 
@@ -107,7 +106,7 @@ yarn build                    # type-check + production bundle → dist/
 yarn package                  # build, then pack into muse.ehpk for submission
 ```
 
-`VITE_RECOGNITION_PROXY` is inlined at build time — build with `.env` present.
+The relay URL is baked in (see above), so the build needs no `.env`.
 
 ---
 

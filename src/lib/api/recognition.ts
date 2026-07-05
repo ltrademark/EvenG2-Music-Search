@@ -9,9 +9,12 @@ import { SignatureGenerator } from 'shazam-api/dist/algorithm'
 import { s16LEToSamplesArray } from 'shazam-api/dist/utils'
 import type { CapturedAudio, TrackMatch } from '../types'
 
-// Direct by default; set VITE_RECOGNITION_PROXY to a CORS-relay base URL
-// (e.g. a free Cloudflare Worker) if the webview blocks the direct call.
-const BASE = import.meta.env.VITE_RECOGNITION_PROXY || 'https://amp.shazam.com'
+// Recognition requests go through a CORS relay (the Cloudflare Worker in
+// proxy/) — the endpoint sends no CORS headers and the webview enforces it.
+// Baked in so no .env is needed; swap the constant, or override at build time
+// with VITE_RECOGNITION_PROXY, to point at a different relay.
+const RECOGNITION_PROXY = 'https://szm-prx.ltrademark.workers.dev'
+const BASE = import.meta.env.VITE_RECOGNITION_PROXY || RECOGNITION_PROXY
 
 // Sample roughly the last ~12s; cap to keep the signature reasonable.
 const MAX_SAMPLES = 16000 * 12
@@ -93,9 +96,7 @@ export async function recognize(
     const host = new URL(BASE).host
     throw new Error(
       `Could not reach ${host} (${(err as Error).message}). ` +
-        (import.meta.env.VITE_RECOGNITION_PROXY
-          ? 'Check the proxy is deployed and whitelisted.'
-          : 'Likely CORS — set VITE_RECOGNITION_PROXY to a relay.'),
+        'Check the recognition proxy is deployed and whitelisted in app.json.',
     )
   }
 
