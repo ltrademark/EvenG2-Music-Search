@@ -11,7 +11,7 @@ import {
 import { getTextWidth, pxTruncate } from '@evenrealities/pretext'
 import { getBridge } from '../bridge'
 import { loadImagePng, placeholderPng, pushImage } from './image'
-import * as wave from './wave'
+import * as wave from './wave-text'
 import type { TrackMatch } from '../types'
 
 const CANVAS_W = 576
@@ -198,27 +198,25 @@ export async function showMenu(): Promise<void> {
   await commit({ list: [menu] })
 }
 
-/** #3 Listening — status + animated wave + cancel hint. */
+/** #3 Listening — status + animated text wave + cancel hint. */
 export async function showListening(): Promise<void> {
   nextId = 1
-  const waveW = wave.WAVE_W
-  const waveImg = new ImageContainerProperty({
-    xPosition: 190,
-    yPosition: PAD,
-    width: waveW,
-    height: wave.WAVE_H,
-    containerID: 100,
-    containerName: 'wave',
-  })
+  const status = '▶ Listening'
+  // The wave is a sibling text container sitting inline right after the status
+  // text — same baseline, so no vertical-centering math needed. It starts at
+  // rest (all-middle) and animates in place via textContainerUpgrade.
+  const GAP = 10
+  const waveX = PAD + Math.ceil(getTextWidth(status)) + GAP
+  const statusId = nextId // 1 — the capture container updated by setListeningStatus
+  const statusC = textC('status', { x: PAD, y: PAD, w: waveX - PAD, content: status, capture: true })
+  const waveId = nextId
+  const waveC = textC('wave', { x: waveX, y: PAD, w: CANVAS_W - waveX - PAD, content: wave.REST })
+  void statusId
   await commit({
-    text: [
-      textC('status', { x: PAD, y: PAD, w: 170, content: '▶ Listening', capture: true }),
-      bottomLeft('cancel', '●● Cancel'),
-    ],
-    images: [waveImg],
+    text: [statusC, waveC, bottomLeft('cancel', '●● Cancel')],
   })
   // Fire-and-forget the animation loop; stopped when leaving this screen.
-  void wave.start(100, 'wave')
+  void wave.start(waveId, 'wave')
 }
 
 /** Update the listening status line in place (e.g. "Searching..."). */
