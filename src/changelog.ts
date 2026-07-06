@@ -9,7 +9,7 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry = {
   version: '0.2.0',
   changes: [
-    'Redesigned around your glasses — History is now the home screen',
+    'Web-App is redesigned around your glasses; History is now the home screen',
     'Tap any song to expand it: album art, album, year, and quick links',
     'Open a match on Spotify, Apple Music, SoundCloud, or the web',
     'Export and import your history as a file, or clear it all at once',

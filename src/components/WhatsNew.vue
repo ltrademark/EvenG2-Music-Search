@@ -131,6 +131,7 @@ export default defineComponent({
   margin: var(--space-2) 0 0;
   font-size: 13px;
   color: var(--text-muted);
+  text-wrap: balance;
 }
 
 .card__body {
@@ -141,7 +142,7 @@ export default defineComponent({
 
 .card__whatsnew {
   margin: 0 0 var(--space-4);
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
 }
 
@@ -151,11 +152,14 @@ export default defineComponent({
 
 .card__changes {
   margin: 0;
-  padding-left: var(--space-5);
+  padding-left: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  font-size: 15px;
+  font-size: 12px;
+  li {
+    text-wrap: balance;
+  }
 }
 
 .card__foot {
