@@ -28,25 +28,13 @@ The signature is computed **on-device**; only a compact fingerprint leaves the g
 
 ## Features
 
-An Even Hub app is a web app running in a phone webview that also drives the 576×288 glasses
-canvas over Bluetooth. MUSE has two coordinated surfaces plus a shared pipeline:
-
-- **On the glasses** — a branded **splash**, a touchpad-driven **menu** (*Start Search* / *View
-  History*), a live **▶ Listening** indicator with an animated waveform, a **result** screen with
-  130×130 album art + title / artist / album (year), and a scrollable **history** browser with a
-  per-entry detail view. Scroll to move the selection, tap to choose, double-tap to go back.
-- **On the phone** — a **History** browser of past identifications: tap an entry to expand its
-  album art, album (year), the date, and quick links to **Spotify / Apple Music / SoundCloud / web
-  search**. **Export / import** the list or clear it. A **Settings** screen (listen duration,
-  microphone, auto-listen) and a **What's New** modal round it out. Listening is triggered from the
-  glasses — the phone is for browsing and control.
-- **Net-zero cost** — no paid recognition API and no API key. The acoustic **signature is generated
-  on-device** (FFT-based, in the browser), so no raw audio leaves the device — only a compact
-  fingerprint is sent.
-- **History on-device** — past identifications are persisted via the Even Hub local-storage bridge
-  (cover art cached as base64, so history renders offline and travels with an export).
-- **Graceful fallbacks** — a placeholder box when cover art is missing or blocked, and a static
-  waveform if the animation can't run.
+- Identify the music playing around you with a tap.
+- See the cover art, title, artist, and album for each song you find.
+- Browse a history of everything you've identified.
+- Open any song on Spotify, Apple Music, SoundCloud, or the web.
+- Export and import your history, or clear it whenever you like.
+- Choose how long it listens and which microphone it uses.
+- Runs at no cost, with no account or API key required.
 
 ---
 
