@@ -2,7 +2,7 @@
   "package_id": "com.ltrademark.muse",
   "edition": "202601",
   "name": "MuSe",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "changelog": "- History is now the home screen, with collapsible song details\n- Quick links to Spotify, Apple Music, SoundCloud, and web search\n- Export, import, or clear your history\n- Album art saved with each song\n- New Settings: listen duration, mic choice, and auto-listen on open\n- Added a What's New screen\n- Smoother listening waveform on the glasses",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.11",
