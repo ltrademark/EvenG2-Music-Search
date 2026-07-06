@@ -7,18 +7,13 @@
 <p>
   <strong>Ambient music identification for the <a href="https://hub.evenrealities.com">Even Realities G2</a> smart glasses.</strong>
   <br />
-  Tap the touchpad, MUSE listens for a few seconds, identifies the track, and shows the cover
-  art, title, artist, and album — right on the glasses. It runs at <strong>net-zero cost</strong>:
-  no paid recognition API and no API key.
+  MUSE recognizes the music playing around you and shows the cover art, title, artist, and album
+  right on the glasses. Every song you find is saved to a history you can revisit and act on from
+  your phone. It works on whatever is in earshot, from a café playlist to a passing car, and runs
+  at no cost with no account or API key.
 </p>
 
 </div>
-
-```
-G2 mic (16kHz mono PCM) → on-device audio signature → recognition service (via a free relay) → track + cover art
-```
-
-The signature is computed **on-device**; only a compact fingerprint leaves the glasses.
 
 > **Note:** recognition goes through a free, unofficial third-party endpoint, relayed via a
 > Cloudflare Worker (see [`proxy/`](proxy/)). It's ambient-robust in practice, but the endpoint is
@@ -109,6 +104,13 @@ in `src/changelog.ts` (shown in the What's New modal).
 ---
 
 ## How it works
+
+```
+G2 mic (16kHz mono PCM) → on-device audio signature → recognition service (via a free relay) → track + cover art
+```
+
+The signature is computed **on-device**, so only a compact fingerprint leaves the glasses, never
+raw audio.
 
 1. A tap on the glasses touchpad starts a fixed listening window.
 2. `bridge.audioControl` streams 16-bit PCM chunks, buffered into an `Int16Array`.
