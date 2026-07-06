@@ -165,7 +165,7 @@ export async function showSplash(): Promise<void> {
   })
   await commit({
     text: [
-      centered('title', 'Music Search', 160, true),
+      centered('title', 'MuSe', 160, true),
       centered('init', 'Initializing...', 250),
     ],
     images: [icon],

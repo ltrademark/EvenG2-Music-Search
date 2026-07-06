@@ -1,15 +1,20 @@
 {
   "package_id": "com.ltrademark.muse",
   "edition": "202601",
-  "name": "MUSE: Music Search",
+  "name": "MuSe",
   "version": "0.2.0",
+  "changelog": "- History is now the home screen, with collapsible song details\n- Quick links to Spotify, Apple Music, SoundCloud, and web search\n- Export, import, or clear your history\n- Album art saved with each song\n- New Settings: listen duration, mic choice, and auto-listen on open\n- Added a What's New screen\n- Smoother listening waveform on the glasses",
   "min_app_version": "2.0.0",
-  "min_sdk_version": "0.0.10",
+  "min_sdk_version": "0.0.11",
   "entrypoint": "index.html",
   "permissions": [
     {
       "name": "g2-microphone",
       "desc": "Listens briefly to identify the music playing around you."
+    },
+    {
+      "name": "phone-microphone",
+      "desc": "Optional: listen with the phone's mic instead of the glasses."
     },
     {
       "name": "network",
