@@ -31,7 +31,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--bg-gradient) fixed;
   color: var(--text);
   font-family: var(--font-family);
   font-size: 16px;
@@ -44,8 +44,10 @@ button {
   cursor: pointer;
 }
 
-// Respect notches / safe areas on the phone webview.
+// Respect notches / safe areas on the phone webview. The native Even Realities
+// header already sits above the webview and covers the top inset, so adding our
+// own padding-top just leaves a gap — only pad the sides and bottom.
 #app {
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }

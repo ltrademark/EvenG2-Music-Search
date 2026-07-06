@@ -8,18 +8,19 @@
   --brand-color-ink: #ffffff;
 
   // Surfaces
-  --bg: #0c0f16;
-  --surface: #151a24;
-  --surface-2: #1e2534;
-  --border: #2a3242;
+  --bg: #0f0f0f;
+  --bg-gradient: linear-gradient(180deg, #0f0f0f 0%, #272727 100%);
+  --surface: #0F0F0F;
+  --surface-2: #161616;
+  --border: #464646;
 
   // Text
-  --text: #eef1f7;
-  --text-muted: #9aa5b8;
+  --text: #ffffff;
+  --text-muted: #6D6D6D;
 
   // Feedback
-  --danger: #ee4455;
-  --success: #22c07a;
+  --danger: #F50000;
+  --success: #11C808;
 
   // Typography — Space Mono has no CJK glyphs, so song titles like 小風波 / 우산
   // fall through to system CJK faces before the generic monospace.

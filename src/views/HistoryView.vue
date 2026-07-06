@@ -17,7 +17,7 @@
         </li>
       </ul>
 
-      <div class="history__controls">
+      <div v-if="history.length > 1" class="history__controls">
         <button class="history__btn" @click="$emit('export')">Export List</button>
         <button class="history__btn" @click="pickFile">Import List</button>
         <button class="history__btn history__btn--danger" @click="$emit('clear')">Clear all</button>
@@ -86,7 +86,6 @@ export default defineComponent({
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
-  margin-top: auto;
 }
 
 .history__btn {
