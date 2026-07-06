@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="public/icon_large.png" alt="MUSE logo" width="96" height="96" />
+<img src="public/icon_large.png" alt="MuSe logo" width="96" height="96" />
 
-<h1>MUSE: Music Search</h1>
+<h1>MuSe</h1>
 
 <p>
   <strong>Ambient music identification for the <a href="https://hub.evenrealities.com">Even Realities G2</a> smart glasses.</strong>
   <br />
-  MUSE recognizes the music playing around you and shows the cover art, title, artist, and album
+  MuSe recognizes the music playing around you and shows the cover art, title, artist, and album
   right on the glasses. Every song you find is saved to a history you can revisit and act on from
   your phone. It works on whatever is in earshot, from a café playlist to a passing car, and runs
   at no cost with no account or API key.
@@ -91,7 +91,7 @@ your machine.
 
 ```bash
 yarn build                    # type-check + production bundle → dist/
-yarn package                  # build, then pack into muse.ehpk for submission
+yarn package                  # build, then pack into com.ltrademark.muse.ehpk for submission
 ```
 
 The relay URL is baked in (see above), so the build needs no `.env`.

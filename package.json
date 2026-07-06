@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "simulate": "evenhub-simulator http://localhost:5173 --automation-port 9898",
     "qr": "evenhub qr --uri http://192.168.1.9:5173",
-    "package": "yarn build && evenhub pack app.json dist -o ltrademark.muse.ehpk -c"
+    "package": "yarn build && evenhub pack app.json dist -o com.ltrademark.muse.ehpk -c"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.11",
