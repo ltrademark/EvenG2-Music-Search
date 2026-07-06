@@ -1,149 +1,108 @@
+<!-- Add a hero banner image here -->
+
 <div align="center">
-
-<img src="public/icon_large.png" alt="MuSe logo" width="96" height="96" />
-
-<h1>MuSe</h1>
-
-<p>
-  <strong>Ambient music identification for the <a href="https://hub.evenrealities.com">Even Realities G2</a> smart glasses.</strong>
-  <br />
-  MuSe recognizes the music playing around you and shows the cover art, title, artist, and album
-  right on the glasses. Every song you find is saved to a history you can revisit and act on from
-  your phone. It works on whatever is in earshot, from a café playlist to a passing car, and runs
-  at no cost with no account or API key.
-</p>
-
+  <img src="public/icon_large.png" width="144" height="144" alt="MuSe" />
+  <h1>MuSe</h1>
+  <p>Ambient music identification for Even Realities G2 smart glasses. MuSe listens to whatever is playing around you, identifies the song, and shows its cover art, title, artist, and album right on the glasses. Every match is saved to a history you can revisit and act on from your phone, and it all runs at no cost with no account or API key.</p>
 </div>
 
-> **Note:** recognition goes through a free, unofficial third-party endpoint, relayed via a
-> Cloudflare Worker (see [`proxy/`](proxy/)). It's ambient-robust in practice, but the endpoint is
-> not an official/supported API and could change.
-
 ---
 
-## Features
+## Glasses display
 
-- Identify the music playing around you with a tap.
-- See the cover art, title, artist, and album for each song you find.
-- Browse a history of everything you've identified.
-- Open any song on Spotify, Apple Music, SoundCloud, or the web.
-- Export and import your history, or clear it whenever you like.
-- Choose how long it listens and which microphone it uses.
-- Runs at no cost, with no account or API key required.
+- **Listening indicator** with an animated waveform while it captures a few seconds of audio
+- **Result screen** with album art, title, artist, and album (year)
+- **Menu** with Start Search and View History, navigated by touchpad (scroll to move, tap to select, double-tap to go back)
+- **History browser** of past finds; tap any entry for its detail view
+- Optional **auto-listen on open** so it starts identifying the moment you launch it
+- Remembers your history between launches
 
----
+|    |    |
+| -- | -- |
+|    |    |
 
-## Tech stack
+## Phone app
 
-- **[Even Hub SDK](https://www.npmjs.com/package/@evenrealities/even_hub_sdk)** — glasses
-  rendering, microphone capture, input events, local storage.
-- **Vue 3 (Options API)** + **SCSS** (themed with CSS custom properties) — the phone webview UI.
-- **On-device audio-signature generation** in the browser (FFT-based, via `shazam-api`).
-- **[@evenrealities/pretext](https://www.npmjs.com/package/@evenrealities/pretext)** — pixel-accurate
-  text measurement for glasses layout.
-- **Vite** + **TypeScript**, packaged with the **Even Hub CLI**.
+- **History home screen**: every song you have found, newest first
+- Tap an entry to expand its album art, album (year), the date, and quick links
+- **Quick links** to Spotify, Apple Music, SoundCloud, and a web search
+- **Export, import, or clear** your history
+- **Settings** for listening duration, microphone (G2 or phone), and auto-listen on open
+- A **What's New** modal behind the version number
 
----
+|    |    |    |
+| -- | -- | -- |
+|    |    |    |
 
-## Getting started
+## Prerequisites
 
-**Prerequisites:** Node 20+ and [Yarn](https://classic.yarnpkg.com/) (classic).
+- [Node.js](https://nodejs.org) 20+
+- [Yarn](https://yarnpkg.com) 1.x
+- [Even Hub](https://evenrealities.com) installed on your phone and paired with your G2 glasses
+- No API key or account is needed
+
+## Setup
 
 ```bash
+git clone https://github.com/ltrademark/EvenG2-Music-Search
+cd EvenG2-Music-Search
 yarn install
-yarn dev                      # Vite dev server → http://localhost:5173
 ```
 
-### Recognition relay
+> Recognition runs through a free Cloudflare Worker relay whose URL is baked into the app, so there is no `.env` to configure. The relay forwards to an unofficial third-party recognition endpoint; it is not an official API and could change. See [`proxy/`](proxy/) to deploy your own.
 
-The recognition endpoint doesn't send CORS headers, and the webview enforces CORS, so requests
-are routed through a free Cloudflare Worker relay (in [`proxy/`](proxy/)). A working relay URL is
-**baked into `src/lib/api/recognition.ts`** (the `RECOGNITION_PROXY` constant), so no `.env` is
-required.
+## Running
 
-To point at your own relay: deploy the worker (see its header for steps), then either edit that
-constant or override it at build time with `VITE_RECOGNITION_PROXY=https://<your-worker>.workers.dev`.
-Add the relay host to `app.json`'s `network` whitelist.
-
-### Run in the desktop simulator
+Start the dev server and simulator in two terminals:
 
 ```bash
-yarn simulate                 # opens the G2 simulator against http://localhost:5173
+# Terminal 1
+yarn dev
+
+# Terminal 2
+yarn simulate
 ```
 
-The simulator renders the 576×288 glasses display and exposes an automation API on port 9898
-(`/api/input`, `/api/screenshot/glasses`, `/api/console`). Note: it can't inject real microphone
-audio, so end-to-end identification is only testable on hardware. Use `VITE_DEMO=listening yarn dev`
-(also `splash` / `1`) to seed a screen for layout checks.
+The simulator renders both the phone UI and the 576x288 glasses display. It cannot inject microphone audio, so end-to-end identification is only testable on hardware; use `VITE_DEMO=1 yarn dev` to seed sample screens for layout checks.
 
-### Run on real glasses
+To test on your phone and glasses, run `yarn dev --host 0.0.0.0` and load it via Even Hub's QR code (`yarn qr`; update the IP in the `qr` script to match your machine).
 
-Same Wi-Fi network as your machine, then:
-
-```bash
-yarn qr                       # prints a QR code to sideload the app
-```
-
-The dev-server URL is configured in the `qr` script in `package.json` — update the IP to match
-your machine.
-
-### Build & package
-
-```bash
-yarn build                    # type-check + production bundle → dist/
-yarn package                  # build, then pack into com.ltrademark.muse.ehpk for submission
-```
-
-The relay URL is baked in (see above), so the build needs no `.env`.
-
-**Versioning:** bump `version` in `package.json` only — a `prebuild` step
-(`scripts/sync-version.mjs`) copies it into `app.json`, and Vite inlines it as
-`__APP_VERSION__` for the UI. Record user-facing changes in `CHANGELOG.md` and mirror the latest
-in `src/changelog.ts` (shown in the What's New modal).
-
----
-
-## How it works
-
-```
-G2 mic (16kHz mono PCM) → on-device audio signature → recognition service (via a free relay) → track + cover art
-```
-
-The signature is computed **on-device**, so only a compact fingerprint leaves the glasses, never
-raw audio.
-
-1. A tap on the glasses touchpad starts a fixed listening window.
-2. `bridge.audioControl` streams 16-bit PCM chunks, buffered into an `Int16Array`.
-3. An acoustic signature is generated on-device and POSTed (via the relay) to the recognition
-   service.
-4. The service returns the best match — title, artist, album, year, and cover art.
-5. The result is shown on the glasses and saved to history (browsable on the phone).
-
-The phone view and the glasses screen are driven by a small state machine in `src/App.vue`.
+## Project structure
 
 ```
 src/
-  App.vue              # orchestrator: pipeline + phone view + glasses nav state machine
-  version.ts           # app name/description (version comes from package.json)
-  changelog.ts         # latest highlights, shown in the What's New modal
-  views/               # phone screens: History, Settings
-  components/          # HistoryEntry, ServiceLinks, WhatsNew, DebugPanel
-  lib/
-    audio/             # mic capture
-    api/               # recognition client + cover-art base64 caching
-    glasses/           # screen router, image (PNG→gray4), text + image waveform
-    storage/           # settings + history (Even Hub local storage)
-  styles/              # theme.scss (CSS variables) + global.scss
-scripts/               # sync-version.mjs (package.json → app.json on build)
-proxy/                 # Cloudflare Worker CORS relay
+├── App.vue              Orchestrator: recognition pipeline, phone views, glasses nav state machine
+├── version.ts           App name and description (version comes from package.json)
+├── changelog.ts         Latest highlights, shown in the What's New modal
+├── views/
+│   ├── HistoryView.vue    History list with collapsible entries and export/import
+│   └── SettingsView.vue   Duration, mic, auto-listen, and the hidden Debug panel
+├── components/
+│   ├── HistoryEntry.vue   One collapsible history row (art, album, links, date)
+│   ├── ServiceLinks.vue   Spotify / Apple Music / SoundCloud / web-search buttons
+│   ├── WhatsNew.vue       App info and changelog modal
+│   └── DebugPanel.vue     Pipeline-trace terminal (unlocked from the modal)
+├── lib/
+│   ├── audio/           Microphone capture
+│   ├── api/             Recognition client and cover-art base64 caching
+│   ├── glasses/         Screen router, image (PNG to gray4), waveform
+│   └── storage/         Settings and history (Even Hub local storage)
+└── styles/             theme.scss (CSS variables) and global.scss
+scripts/                sync-version.mjs (copies package.json version into app.json on build)
+proxy/                  Cloudflare Worker CORS relay
 ```
 
----
+## Scripts
 
-## Notes & limitations
+| Command | Description |
+|---|---|
+| `yarn dev` | Start the Vite dev server on `:5173` |
+| `yarn simulate` | Launch the Even Hub simulator pointed at the dev server |
+| `yarn build` | Production build to `dist/` |
+| `yarn preview` | Preview the production build locally |
+| `yarn qr` | Print a QR code to sideload the app onto your glasses |
+| `yarn package` | Build and pack into `com.ltrademark.muse.ehpk` for submission |
 
-- **Ambient accuracy** is good in practice, but depends on a clear, loud-enough capture.
-- **BLE image cadence:** the glasses draw over Bluetooth at ~0.5–2s per update, so the listening
-  waveform animates slowly on real hardware and album art takes a moment to appear.
-- Album art / year are best-effort — the app degrades gracefully when they're missing.
-- The recognition endpoint is unofficial and could change without notice.
+## License
+
+[CC BY-NC-SA 4.0](LICENSE) © 2026 Leo Herrera
