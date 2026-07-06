@@ -8,11 +8,14 @@ export interface Settings {
   captureSeconds: number
   /** Which microphone to capture from. */
   micSource: AudioInputSource
+  /** Auto-start a listen when the glasses app opens (once per session). */
+  autoListen: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   captureSeconds: 10,
   micSource: AudioInputSource.Glasses,
+  autoListen: false,
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -28,6 +31,7 @@ export async function loadSettings(): Promise<Settings> {
         parsed.micSource === AudioInputSource.Phone
           ? AudioInputSource.Phone
           : AudioInputSource.Glasses,
+      autoListen: parsed.autoListen === true,
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

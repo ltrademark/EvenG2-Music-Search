@@ -3,8 +3,8 @@
 /** Identification pipeline state, mirrored on both the phone UI and glasses. */
 export type AppPhase = 'idle' | 'listening' | 'identifying' | 'result' | 'nomatch' | 'error'
 
-/** Which phone-side screen is showing. */
-export type PhoneView = 'identify' | 'history' | 'settings' | 'debug'
+/** Which phone-side tab is showing. Listening moved to the glasses. */
+export type PhoneView = 'history' | 'settings'
 
 /** One line in the debug log shown on the phone Debug tab. */
 export interface DebugEntry {
@@ -41,6 +41,9 @@ export interface TrackMatch {
   year?: string
   /** Cover Art Archive URL (front-250) derived from the release group. */
   coverArtUrl?: string
+  /** Cover art cached as a base64 data URI, so history renders offline and
+   *  survives an export (the URL may 404 or be blocked later). */
+  coverArtData?: string
   /** AcoustID match confidence, 0..1. */
   score: number
   /** Epoch millis when this match was recorded (stamped by the caller). */

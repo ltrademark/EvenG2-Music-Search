@@ -16,9 +16,17 @@
       "desc": "Sends an audio signature to identify the song and fetches album art.",
       "whitelist": [
         "https://szm-prx.ltrademark.workers.dev",
-        "https://*.mzstatic.com"
+        "https://*.mzstatic.com",
+        "https://open.spotify.com",
+        "https://music.apple.com",
+        "https://soundcloud.com",
+        "https://www.google.com",
+        "https://github.com",
+        "https://www.ltrademark.com"
       ]
     }
   ],
-  "supported_languages": ["en"]
+  "supported_languages": [
+    "en"
+  ]
 }

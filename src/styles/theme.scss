@@ -21,8 +21,11 @@
   --danger: #ee4455;
   --success: #22c07a;
 
-  // Typography
-  --font-family: 'Space Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+  // Typography — Space Mono has no CJK glyphs, so song titles like 小風波 / 우산
+  // fall through to system CJK faces before the generic monospace.
+  --font-family: 'Space Mono', ui-monospace, 'SFMono-Regular', 'Menlo',
+    'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', 'Malgun Gothic',
+    'Noto Sans CJK KR', 'Noto Sans CJK SC', monospace;
 
   // Spacing scale
   --space-1: 4px;

@@ -1,89 +1,140 @@
 <template>
   <section class="history">
-    <header class="history__head">
-      <h2 class="history__title">History</h2>
-      <button v-if="history.length" class="history__clear" @click="$emit('clear')">Clear</button>
-    </header>
+    <div v-if="!history.length" class="history__empty">
+      <img class="history__empty-icon" :src="emptyIcon" alt="" />
+      <h2 class="history__empty-title">No Songs Identified Yet</h2>
+      <p class="history__empty-hint">Use your glasses to find songs around you</p>
+    </div>
 
-    <p v-if="!history.length" class="history__empty">
-      Songs you identify will show up here.
-    </p>
+    <template v-else>
+      <ul class="history__list">
+        <li v-for="item in history" :key="item.acoustId">
+          <HistoryEntry
+            :entry="item"
+            :expanded="expandedId === item.acoustId"
+            @toggle="toggle(item.acoustId)"
+          />
+        </li>
+      </ul>
 
-    <ul v-else class="history__list">
-      <li v-for="item in history" :key="item.acoustId" class="history__item">
-        <div class="history__song">{{ item.title }}</div>
-        <div class="history__artist">{{ item.artist }}</div>
-      </li>
-    </ul>
+      <div class="history__controls">
+        <button class="history__btn" @click="$emit('export')">Export List</button>
+        <button class="history__btn" @click="pickFile">Import List</button>
+        <button class="history__btn history__btn--danger" @click="$emit('clear')">Clear all</button>
+      </div>
+    </template>
+
+    <input
+      ref="file"
+      class="history__file"
+      type="file"
+      accept="application/json,.json"
+      @change="onFile"
+    />
   </section>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
+import HistoryEntry from '../components/HistoryEntry.vue'
 import type { TrackMatch } from '../lib/types'
+import emptyIcon from '../assets/img/icon_nosong.svg'
 
 export default defineComponent({
   name: 'HistoryView',
+  components: { HistoryEntry },
   props: {
     history: { type: Array as PropType<TrackMatch[]>, default: () => [] },
   },
-  emits: ['clear'],
+  emits: ['export', 'import', 'clear'],
+  data() {
+    return { emptyIcon, expandedId: null as string | null }
+  },
+  methods: {
+    toggle(id: string) {
+      this.expandedId = this.expandedId === id ? null : id
+    },
+    pickFile() {
+      ;(this.$refs.file as HTMLInputElement).click()
+    },
+    async onFile(e: Event) {
+      const input = e.target as HTMLInputElement
+      const file = input.files?.[0]
+      if (!file) return
+      const text = await file.text()
+      input.value = '' // allow re-importing the same file
+      this.$emit('import', text)
+    },
+  },
 })
 </script>
 
 <style lang="scss" scoped>
 .history {
-  padding: var(--space-5) var(--space-4);
-}
-
-.history__head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.history__title {
-  margin: 0;
-  font-size: 18px;
-}
-
-.history__clear {
-  border: none;
-  background: transparent;
-  color: var(--danger);
-  font-size: 13px;
-}
-
-.history__empty {
-  color: var(--text-muted);
-  font-size: 14px;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .history__list {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.history__controls {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-top: auto;
+}
+
+.history__btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+
+  &--danger {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  }
+}
+
+.history__file {
+  display: none;
+}
+
+.history__empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-6);
   gap: var(--space-2);
 }
 
-.history__item {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border);
+.history__empty-icon {
+  width: 96px;
+  height: 96px;
+  margin-bottom: var(--space-3);
+  opacity: 0.9;
 }
 
-.history__song {
+.history__empty-title {
+  margin: 0;
+  font-size: 20px;
   font-weight: 700;
-  word-break: break-word;
 }
 
-.history__artist {
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--brand-color);
+.history__empty-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 </style>

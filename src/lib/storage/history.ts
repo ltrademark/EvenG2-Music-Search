@@ -2,7 +2,9 @@ import { getBridge } from '../bridge'
 import type { TrackMatch } from '../types'
 
 const HISTORY_KEY = 'musicid.history'
-const MAX_ENTRIES = 10
+// Higher than the glasses' short list — entries now carry base64 art, so watch
+// the localStorage footprint if this grows much further.
+const MAX_ENTRIES = 50
 
 export async function loadHistory(): Promise<TrackMatch[]> {
   const bridge = await getBridge()
@@ -33,4 +35,24 @@ export async function addToHistory(match: TrackMatch): Promise<TrackMatch[]> {
 export async function clearHistory(): Promise<void> {
   const bridge = await getBridge()
   await bridge.setLocalStorage(HISTORY_KEY, JSON.stringify([]))
+}
+
+/**
+ * Merge an imported list into the existing history: imported entries win on
+ * `acoustId` collisions, order is newest-first by `identifiedAt`, and the whole
+ * thing is capped. Returns the persisted list.
+ */
+export async function importHistory(incoming: TrackMatch[]): Promise<TrackMatch[]> {
+  const existing = await loadHistory()
+  const byId = new Map<string, TrackMatch>()
+  for (const m of existing) byId.set(m.acoustId, m)
+  for (const m of incoming) byId.set(m.acoustId, m) // imported wins
+
+  const merged = [...byId.values()]
+    .sort((a, b) => (b.identifiedAt ?? 0) - (a.identifiedAt ?? 0))
+    .slice(0, MAX_ENTRIES)
+
+  const bridge = await getBridge()
+  await bridge.setLocalStorage(HISTORY_KEY, JSON.stringify(merged))
+  return merged
 }

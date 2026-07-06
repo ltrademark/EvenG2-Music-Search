@@ -1,49 +1,58 @@
 <template>
   <div class="app">
-    <header class="app__bar">
-      <h1 class="app__brand">MUSE</h1>
+    <header class="topbar">
+      <nav class="tabs">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="tab"
+          :class="{ 'tab--active': view === tab.id }"
+          @click="view = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+      <div class="topbar__right">
+        <span class="topbar__ver">v{{ version }}</span>
+        <button class="topbar__help" aria-label="What's new" @click="showWhatsNew = true">?</button>
+      </div>
     </header>
 
     <main class="app__main">
-      <IdentifyView
-        v-if="view === 'identify'"
-        :phase="phase"
-        :remaining="remaining"
-        :match="match"
-        :error-message="errorMessage"
-        @identify="identify"
+      <HistoryView
+        v-if="view === 'history'"
+        :history="history"
+        @export="onExportHistory"
+        @import="onImportHistory"
+        @clear="onClearHistory"
       />
-      <HistoryView v-else-if="view === 'history'" :history="history" @clear="onClearHistory" />
-      <SettingsView v-else-if="view === 'settings'" :settings="settings" @save="onSaveSettings" />
-      <DebugView v-else :entries="debug" @clear="debug = []" />
+      <SettingsView
+        v-else
+        :settings="settings"
+        :debug="debug"
+        :debug-unlocked="debugUnlocked"
+        @save="onSaveSettings"
+        @clear-debug="debug = []"
+      />
     </main>
 
-    <nav class="app__nav">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        class="app__tab"
-        :class="{ 'app__tab--active': view === tab.id }"
-        @click="view = tab.id"
-      >
-        {{ tab.label }}
-      </button>
-    </nav>
+    <WhatsNew v-if="showWhatsNew" @close="showWhatsNew = false" @unlock-debug="onUnlockDebug" />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { OsEventTypeList, type EvenHubEvent } from '@evenrealities/even_hub_sdk'
-import IdentifyView from './views/IdentifyView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
-import DebugView from './views/DebugView.vue'
+import WhatsNew from './components/WhatsNew.vue'
 import { getBridge } from './lib/bridge'
 import { captureAudio } from './lib/audio/capture'
 import { recognize } from './lib/api/recognition'
+import { toDataUrl } from './lib/api/coverart'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from './lib/storage/settings'
-import { loadHistory, addToHistory, clearHistory } from './lib/storage/history'
+import { loadHistory, addToHistory, clearHistory, importHistory } from './lib/storage/history'
+import { exportHistory, parseImport } from './lib/history-io'
 import {
   showSplash,
   showMenu,
@@ -59,6 +68,7 @@ import {
 import type { AppPhase, DebugEntry, GlassesScreen, PhoneView, TrackMatch } from './lib/types'
 
 const SPLASH_MS = 2000
+const DEBUG_UNLOCK_KEY = 'musicid.debugUnlocked'
 
 interface Data {
   view: PhoneView
@@ -73,14 +83,17 @@ interface Data {
   unsubscribe: (() => void) | null
   searchCancelled: boolean
   debug: DebugEntry[]
+  showWhatsNew: boolean
+  debugUnlocked: boolean
+  autoListenedThisSession: boolean
 }
 
 export default defineComponent({
   name: 'App',
-  components: { IdentifyView, HistoryView, SettingsView, DebugView },
+  components: { HistoryView, SettingsView, WhatsNew },
   data(): Data {
     return {
-      view: 'identify',
+      view: 'history',
       phase: 'idle',
       glassesScreen: 'splash',
       remaining: 0,
@@ -92,18 +105,22 @@ export default defineComponent({
       unsubscribe: null,
       searchCancelled: false,
       debug: [],
+      showWhatsNew: false,
+      debugUnlocked: false,
+      autoListenedThisSession: false,
     }
   },
   computed: {
+    version(): string {
+      return __APP_VERSION__
+    },
     busy(): boolean {
       return this.phase === 'listening' || this.phase === 'identifying'
     },
     tabs(): { id: PhoneView; label: string }[] {
       return [
-        { id: 'identify', label: 'Identify' },
         { id: 'history', label: 'History' },
         { id: 'settings', label: 'Settings' },
-        { id: 'debug', label: 'Debug' },
       ]
     },
   },
@@ -114,6 +131,7 @@ export default defineComponent({
     // Splash is the first page (createStartUpPageContainer), then the menu.
     await showSplash()
     const bridge = await getBridge()
+    this.debugUnlocked = (await bridge.getLocalStorage(DEBUG_UNLOCK_KEY)) === 'true'
     this.unsubscribe = bridge.onEvenHubEvent(this.onGlassesEvent)
 
     // Dev-only: `VITE_DEMO=1 yarn dev` seeds sample data to verify the
@@ -130,7 +148,16 @@ export default defineComponent({
       }
       return
     }
-    setTimeout(() => void this.gotoMenu(), SPLASH_MS)
+
+    // After the splash, either auto-listen (once per session) or show the menu.
+    setTimeout(() => {
+      if (this.settings.autoListen && !this.autoListenedThisSession) {
+        this.autoListenedThisSession = true
+        void this.identify()
+      } else {
+        void this.gotoMenu()
+      }
+    }, SPLASH_MS)
   },
   beforeUnmount() {
     this.captureAbort?.abort()
@@ -138,12 +165,11 @@ export default defineComponent({
     this.unsubscribe?.()
   },
   methods: {
-    /** Run the full listen → fingerprint → lookup pipeline (drives both surfaces). */
+    /** Run the full listen → fingerprint → lookup pipeline (drives the glasses). */
     async identify() {
       if (this.busy) return
       this.match = null
       this.errorMessage = ''
-      this.view = 'identify'
       this.searchCancelled = false
       this.pushDebug(`Search started (${this.settings.captureSeconds}s, ${this.settings.micSource} mic)`)
 
@@ -187,6 +213,8 @@ export default defineComponent({
 
         if (match) {
           match.identifiedAt = Date.now()
+          // Cache the cover art as base64 so history is offline-friendly + exportable.
+          match.coverArtData = (await toDataUrl(match.coverArtUrl)) ?? undefined
           this.match = match
           this.history = await addToHistory(match)
           this.phase = 'result'
@@ -323,10 +351,10 @@ export default defineComponent({
         },
         {
           acoustId: 'demo-2',
-          title: 'The Jawn',
-          artist: 'Jerri',
-          album: 'The Jawn',
-          year: '2026',
+          title: '小風波',
+          artist: 'Alan Tam',
+          album: '愛的根源',
+          year: '1986',
           score: 0.8,
           identifiedAt: Date.UTC(2026, 0, 3),
         },
@@ -346,6 +374,30 @@ export default defineComponent({
       await clearHistory()
       this.history = []
     },
+
+    async onExportHistory() {
+      const result = await exportHistory(this.history)
+      if (result === 'copied') window.alert('History copied to the clipboard as JSON.')
+      else if (result === 'failed') window.alert('Could not export the history.')
+    },
+
+    async onImportHistory(text: string) {
+      try {
+        const items = parseImport(text)
+        this.history = await importHistory(items)
+      } catch (err) {
+        window.alert(`Import failed: ${(err as Error).message}`)
+      }
+    },
+
+    async onUnlockDebug() {
+      this.debugUnlocked = true
+      const bridge = await getBridge()
+      await bridge.setLocalStorage(DEBUG_UNLOCK_KEY, 'true')
+      // Reveal it: close the modal and drop the user on Settings.
+      this.showWhatsNew = false
+      this.view = 'settings'
+    },
   },
 })
 </script>
@@ -354,54 +406,65 @@ export default defineComponent({
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  height: 100%;
 }
 
-.app__bar {
-  padding: var(--space-4);
-  text-align: center;
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 
-.app__brand {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.tabs {
+  display: flex;
+  gap: var(--space-2);
 }
 
-.app__banner {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  background: color-mix(in srgb, var(--brand-color) 18%, var(--bg));
-  color: var(--text);
-  font-size: 13px;
-  text-align: center;
-  cursor: pointer;
+.tab {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 17px;
+  font-weight: 700;
+
+  &--active {
+    background: color-mix(in srgb, var(--brand-color) 22%, var(--bg));
+    color: var(--brand-color);
+  }
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topbar__ver {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.topbar__help {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .app__main {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-}
-
-.app__nav {
-  display: flex;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.app__tab {
-  flex: 1;
-  padding: var(--space-4) 0;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 13px;
-
-  &--active {
-    color: var(--brand-color);
-    box-shadow: inset 0 2px 0 var(--brand-color);
-  }
 }
 </style>
