@@ -154,7 +154,7 @@ const formatDate = (ms?: number): string => {
 /** #1 Splash. First page → createStartUpPageContainer. */
 export async function showSplash(): Promise<void> {
   nextId = 1
-  const iconW = 96
+  const iconW = 72 // matches icon_large.png's native size (no upscaling)
   const icon = new ImageContainerProperty({
     xPosition: Math.round((CANVAS_W - iconW) / 2),
     yPosition: 44,
