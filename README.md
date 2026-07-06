@@ -1,10 +1,18 @@
-# MUSE: Music Search
+<div align="center">
 
-Ambient music identification for the [Even Realities G2](https://hub.evenrealities.com) smart
-glasses. Tap the touchpad, MUSE listens for a few seconds, identifies the track, and shows the
-cover art, title, artist, and album — right on the glasses.
+<img src="public/icon_large.png" alt="MUSE logo" width="96" height="96" />
 
-It runs at **net-zero cost** — no paid recognition API and no API key:
+<h1>MUSE: Music Search</h1>
+
+<p>
+  <strong>Ambient music identification for the <a href="https://hub.evenrealities.com">Even Realities G2</a> smart glasses.</strong>
+  <br />
+  Tap the touchpad, MUSE listens for a few seconds, identifies the track, and shows the cover
+  art, title, artist, and album — right on the glasses. It runs at <strong>net-zero cost</strong>:
+  no paid recognition API and no API key.
+</p>
+
+</div>
 
 ```
 G2 mic (16kHz mono PCM) → on-device audio signature → recognition service (via a free relay) → track + cover art
@@ -21,28 +29,22 @@ The signature is computed **on-device**; only a compact fingerprint leaves the g
 ## Features
 
 An Even Hub app is a web app running in a phone webview that also drives the 576×288 glasses
-canvas over Bluetooth. MUSE has two coordinated surfaces:
+canvas over Bluetooth. MUSE has two coordinated surfaces plus a shared pipeline:
 
-### On the glasses
-- **Splash** — branded loading screen.
-- **Menu** — *Start Search* / *View History*, navigated with the touchpad (scroll to move the
-  selection, tap to choose).
-- **Listening** — a live "▶ Listening" indicator with an animated waveform; double-tap to cancel.
-- **Result** — 130×130 album art, track title, artist, and album (year). Tap to search again,
-  double-tap to go back. Falls back to a placeholder when art isn't available.
-- **History** — a scrollable list of past identifications; tap a row for a detail view with the
-  art and the date it was identified.
-
-### On the phone
-- One-tap **Identify** with live status, a result card (cover art + year), a **History** list, a
-  **Settings** screen (listen duration + microphone source), and a **Debug** tab that traces each
-  step (mic level, signature, recognition result).
-
-### Under the hood
-- On-device audio-**signature** generation (WebAssembly) — no raw audio leaves the device.
-- A stateless **Cloudflare Worker** relay adds CORS so the webview can reach the recognition
-  endpoint; the service returns title/artist/album/year and cover art directly.
-- Recognition **history** persisted on-device via the Even Hub local storage bridge.
+- **On the glasses** — a branded **splash**, a touchpad-driven **menu** (*Start Search* / *View
+  History*), a live **▶ Listening** indicator with an animated waveform, a **result** screen with
+  130×130 album art + title / artist / album (year), and a scrollable **history** browser with a
+  per-entry detail view. Scroll to move the selection, tap to choose, double-tap to go back.
+- **On the phone** — one-tap **Identify** with live status, a **result card** (cover art + year), a
+  **History** list, a **Settings** screen (listen duration + microphone source), and a **Debug** tab
+  that traces each step (mic level, signature, recognition result).
+- **Net-zero cost** — no paid recognition API and no API key. The acoustic **signature is generated
+  on-device** (FFT-based, in the browser), so no raw audio leaves the device — only a compact
+  fingerprint is sent.
+- **History on-device** — past identifications are persisted via the Even Hub local-storage bridge,
+  so the glasses history survives restarts.
+- **Graceful fallbacks** — a placeholder box when cover art is missing or blocked, and a static
+  waveform if the animation can't run.
 
 ---
 
@@ -51,7 +53,7 @@ canvas over Bluetooth. MUSE has two coordinated surfaces:
 - **[Even Hub SDK](https://www.npmjs.com/package/@evenrealities/even_hub_sdk)** — glasses
   rendering, microphone capture, input events, local storage.
 - **Vue 3 (Options API)** + **SCSS** (themed with CSS custom properties) — the phone webview UI.
-- On-device audio-signature generation in the browser.
+- **On-device audio-signature generation** in the browser (FFT-based, via `shazam-api`).
 - **[@evenrealities/pretext](https://www.npmjs.com/package/@evenrealities/pretext)** — pixel-accurate
   text measurement for glasses layout.
 - **Vite** + **TypeScript**, packaged with the **Even Hub CLI**.
@@ -86,7 +88,8 @@ yarn simulate                 # opens the G2 simulator against http://localhost:
 
 The simulator renders the 576×288 glasses display and exposes an automation API on port 9898
 (`/api/input`, `/api/screenshot/glasses`, `/api/console`). Note: it can't inject real microphone
-audio, so end-to-end identification is only testable on hardware.
+audio, so end-to-end identification is only testable on hardware. Use `VITE_DEMO=listening yarn dev`
+(also `splash` / `1`) to seed a screen for layout checks.
 
 ### Run on real glasses
 
@@ -129,7 +132,7 @@ src/
   lib/
     audio/             # mic capture
     api/               # recognition client
-    glasses/           # screen router, image (PNG→gray) + waveform rendering
+    glasses/           # screen router, image (PNG→gray4), text + image waveform
     storage/           # settings + history (Even Hub local storage)
   styles/              # theme.scss (CSS variables) + global.scss
 proxy/                 # Cloudflare Worker CORS relay
@@ -140,7 +143,7 @@ proxy/                 # Cloudflare Worker CORS relay
 ## Notes & limitations
 
 - **Ambient accuracy** is good in practice, but depends on a clear, loud-enough capture.
-- **BLE image cadence:** the glasses draw images over Bluetooth at ~0.5–2s per frame, so the
-  listening waveform animates slowly on real hardware and album art takes a moment to appear.
+- **BLE image cadence:** the glasses draw over Bluetooth at ~0.5–2s per update, so the listening
+  waveform animates slowly on real hardware and album art takes a moment to appear.
 - Album art / year are best-effort — the app degrades gracefully when they're missing.
 - The recognition endpoint is unofficial and could change without notice.
