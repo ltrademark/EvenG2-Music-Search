@@ -339,13 +339,10 @@ export default defineComponent({
       const samples: TrackMatch[] = [
         {
           acoustId: 'demo-1',
-          releaseGroupId: '1b022e01-4da6-387b-8658-8678046e4cef',
           title: 'Smells Like Teen Spirit',
           artist: 'Nirvana',
           album: 'Nevermind',
           year: '1991',
-          coverArtUrl:
-            'https://coverartarchive.org/release-group/1b022e01-4da6-387b-8658-8678046e4cef/front-250',
           score: 0.94,
           identifiedAt: Date.UTC(2026, 4, 12),
         },
