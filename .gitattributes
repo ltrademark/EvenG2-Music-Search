@@ -1,0 +1,9 @@
+# Normalize line endings to LF on every machine (Windows / WSL / macOS / Linux),
+# so a checkout never shows phantom whole-file "modified" diffs from CRLF.
+* text=auto eol=lf
+
+# Binary assets — never touch their bytes.
+*.png binary
+*.gif binary
+*.woff2 binary
+*.ehpk binary
