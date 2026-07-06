@@ -35,14 +35,16 @@ canvas over Bluetooth. MUSE has two coordinated surfaces plus a shared pipeline:
   History*), a live **▶ Listening** indicator with an animated waveform, a **result** screen with
   130×130 album art + title / artist / album (year), and a scrollable **history** browser with a
   per-entry detail view. Scroll to move the selection, tap to choose, double-tap to go back.
-- **On the phone** — one-tap **Identify** with live status, a **result card** (cover art + year), a
-  **History** list, a **Settings** screen (listen duration + microphone source), and a **Debug** tab
-  that traces each step (mic level, signature, recognition result).
+- **On the phone** — a **History** browser of past identifications: tap an entry to expand its
+  album art, album (year), the date, and quick links to **Spotify / Apple Music / SoundCloud / web
+  search**. **Export / import** the list or clear it. A **Settings** screen (listen duration,
+  microphone, auto-listen) and a **What's New** modal round it out. Listening is triggered from the
+  glasses — the phone is for browsing and control.
 - **Net-zero cost** — no paid recognition API and no API key. The acoustic **signature is generated
   on-device** (FFT-based, in the browser), so no raw audio leaves the device — only a compact
   fingerprint is sent.
-- **History on-device** — past identifications are persisted via the Even Hub local-storage bridge,
-  so the glasses history survives restarts.
+- **History on-device** — past identifications are persisted via the Even Hub local-storage bridge
+  (cover art cached as base64, so history renders offline and travels with an export).
 - **Graceful fallbacks** — a placeholder box when cover art is missing or blocked, and a static
   waveform if the animation can't run.
 
@@ -111,30 +113,38 @@ yarn package                  # build, then pack into muse.ehpk for submission
 
 The relay URL is baked in (see above), so the build needs no `.env`.
 
+**Versioning:** bump `version` in `package.json` only — a `prebuild` step
+(`scripts/sync-version.mjs`) copies it into `app.json`, and Vite inlines it as
+`__APP_VERSION__` for the UI. Record user-facing changes in `CHANGELOG.md` and mirror the latest
+in `src/changelog.ts` (shown in the What's New modal).
+
 ---
 
 ## How it works
 
-1. A tap (glasses touchpad or the phone button) starts a fixed listening window.
+1. A tap on the glasses touchpad starts a fixed listening window.
 2. `bridge.audioControl` streams 16-bit PCM chunks, buffered into an `Int16Array`.
 3. An acoustic signature is generated on-device and POSTed (via the relay) to the recognition
    service.
 4. The service returns the best match — title, artist, album, year, and cover art.
-5. The result is shown on both the phone UI and the glasses, and saved to history.
+5. The result is shown on the glasses and saved to history (browsable on the phone).
 
 The phone view and the glasses screen are driven by a small state machine in `src/App.vue`.
 
 ```
 src/
   App.vue              # orchestrator: pipeline + phone view + glasses nav state machine
-  views/               # phone screens: Identify / History / Settings / Debug
-  components/           # ResultCard, StatusIndicator
+  version.ts           # app name/description (version comes from package.json)
+  changelog.ts         # latest highlights, shown in the What's New modal
+  views/               # phone screens: History, Settings
+  components/          # HistoryEntry, ServiceLinks, WhatsNew, DebugPanel
   lib/
     audio/             # mic capture
-    api/               # recognition client
+    api/               # recognition client + cover-art base64 caching
     glasses/           # screen router, image (PNG→gray4), text + image waveform
     storage/           # settings + history (Even Hub local storage)
   styles/              # theme.scss (CSS variables) + global.scss
+scripts/               # sync-version.mjs (package.json → app.json on build)
 proxy/                 # Cloudflare Worker CORS relay
 ```
 
