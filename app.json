@@ -3,7 +3,7 @@
   "edition": "202601",
   "name": "MuSe",
   "version": "0.2.3",
-  "changelog": "- History is now the home screen, with collapsible song details\n- Quick links to Spotify, Apple Music, SoundCloud, and web search\n- Export, import, or clear your history\n- Album art saved with each song\n- New Settings: listen duration, mic choice, and auto-listen on open\n- Added a What's New screen\n- Smoother listening waveform on the glasses",
+  "changelog": "- Web-App is redesigned around your glasses; History is now the home screen\n- Tap any song to expand it: album art, album, year, and quick links\n- Open a match on Spotify, Apple Music, SoundCloud, or the web\n- Export and import your history as a file, or clear it all at once\n- Album art is saved with each song, so your history works offline\n- New Settings: listening duration, G2/Phone mic, and Auto-Listen on open\n- Smoother listening waveform on the glasses\n- Tap the version number anytime to see what changed",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.11",
   "entrypoint": "index.html",
