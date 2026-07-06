@@ -10,7 +10,16 @@ export type ExportResult = 'downloaded' | 'copied' | 'failed'
 export async function exportHistory(items: TrackMatch[]): Promise<ExportResult> {
   const json = JSON.stringify(items, null, 2)
 
-  // Preferred path: trigger a file download.
+  // Clipboard first — reliable and gives honest feedback. In the Even Hub
+  // webview a programmatic download can silently no-op (looks like nothing
+  // happened), so we don't lead with it.
+  try {
+    await navigator.clipboard.writeText(json)
+    return 'copied'
+  } catch {
+    // Fallback: attempt a file download.
+  }
+
   try {
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -22,13 +31,6 @@ export async function exportHistory(items: TrackMatch[]): Promise<ExportResult> 
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     return 'downloaded'
-  } catch {
-    // Fallback: clipboard.
-  }
-
-  try {
-    await navigator.clipboard.writeText(json)
-    return 'copied'
   } catch {
     return 'failed'
   }

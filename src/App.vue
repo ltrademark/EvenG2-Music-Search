@@ -377,7 +377,8 @@ export default defineComponent({
 
     async onExportHistory() {
       const result = await exportHistory(this.history)
-      if (result === 'copied') window.alert('History copied to the clipboard as JSON.')
+      if (result === 'copied')
+        window.alert('History copied to the clipboard as JSON. Paste it into a file to save it, then use Import to restore.')
       else if (result === 'failed') window.alert('Could not export the history.')
     },
 
