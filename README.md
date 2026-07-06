@@ -1,4 +1,6 @@
-<!-- Add a hero banner image here -->
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/238b357e-f75f-4fdb-b24f-81ea21f5bbdd" />
+
+---
 
 <div align="center">
   <img src="public/icon_large.png" width="144" height="144" alt="MuSe" />
@@ -17,9 +19,9 @@
 - Optional **auto-listen on open** so it starts identifying the moment you launch it
 - Remembers your history between launches
 
-|    |    |
+| ![image 1](https://github.com/user-attachments/assets/08b5018d-2818-4d25-841f-d48f1fc1228b) | ![image 2](https://github.com/user-attachments/assets/964eb32f-b4e3-4d75-91da-4a2b97b1eec5) |
 | -- | -- |
-|    |    |
+| ![image 3](https://github.com/user-attachments/assets/8113f4ab-83f6-43ad-99d8-458b60c3a03f) | ![image 4](https://github.com/user-attachments/assets/37f47529-5b29-49d0-be23-075dfb468479) |
 
 ## Phone app
 
@@ -30,7 +32,7 @@
 - **Settings** for listening duration, microphone (G2 or phone), and auto-listen on open
 - A **What's New** modal behind the version number
 
-|    |    |    |
+| <img width="2880" height="5632" alt="image" src="https://github.com/user-attachments/assets/17281f3b-c47d-4810-b152-9f3bae1f65b2" /> | <img width="2880" height="5632" alt="image" src="https://github.com/user-attachments/assets/184a4e57-e98a-40ce-bd99-58ede16b55c6" /> | <img width="2880" height="5632" alt="image" src="https://github.com/user-attachments/assets/83821f25-8e5a-49d9-aabe-804ce220fda0" /> |
 | -- | -- | -- |
 |    |    |    |
 
