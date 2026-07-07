@@ -347,6 +347,10 @@ async function renderArt(
   name: string,
   size: number,
 ): Promise<void> {
-  const png = match.coverArtUrl ? await loadImagePng(match.coverArtUrl, size, size) : null
+  // Prefer the cached base64 art (offline, no live fetch, proven to have decoded
+  // once) and fall back to the remote URL — mirroring the phone's HistoryEntry.
+  // loadImagePng handles a data: URI as happily as an https one.
+  const src = match.coverArtData ?? match.coverArtUrl
+  const png = src ? await loadImagePng(src, size, size) : null
   await pushImage(containerID, name, png ?? (await placeholderPng(size, size)))
 }
