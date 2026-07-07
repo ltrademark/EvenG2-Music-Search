@@ -83,8 +83,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 440px;
-  max-height: 90%;
+  max-width: 380px;
+  max-height: 80vh;
   overflow: hidden;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -97,7 +97,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: var(--space-6) var(--space-5) var(--space-5);
+  padding: var(--space-5);
   border-bottom: 1px solid var(--border);
 }
 
@@ -141,8 +141,8 @@ export default defineComponent({
 }
 
 .card__whatsnew {
-  margin: 0 0 var(--space-4);
-  font-size: 24px;
+  margin: 0 0 var(--space-3);
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -152,13 +152,24 @@ export default defineComponent({
 
 .card__changes {
   margin: 0;
-  padding-left: var(--space-2);
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   font-size: 12px;
   li {
+    position: relative;
+    padding-left: var(--space-5);
+    line-height: 1.4;
     text-wrap: balance;
+
+    &::before {
+      content: '•';
+      position: absolute;
+      left: var(--space-1);
+      color: var(--text-muted);
+    }
   }
 }
 
