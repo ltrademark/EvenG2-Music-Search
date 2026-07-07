@@ -4,6 +4,19 @@ A running log of notable changes, newest first. The latest entry's highlights
 are mirrored (in friendlier wording) in the in-app **What's New** modal via
 `src/changelog.ts`.
 
+## v0.2.4
+
+### Glasses
+- **Album art now renders on the glasses.** The result and history-detail
+  screens prefer the base64 art cached with each song, falling back to the
+  remote URL, so a stale or blocked URL fetch no longer leaves only the
+  placeholder box (the phone already preferred the cached copy).
+
+### Phone app
+- Restyled the **What's New** modal to a more compact, natural scale: a smaller
+  section heading, a tidier change list with custom bullets, and a narrower
+  card — proportions adapted from the Metro Tracker sibling app.
+
 ## v0.2.0
 
 ### Phone app

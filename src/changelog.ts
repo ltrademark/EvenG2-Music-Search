@@ -7,15 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry = {
-  version: '0.2.0',
+  version: '0.2.4',
   changes: [
-    'Web-App is redesigned around your glasses; History is now the home screen',
-    'Tap any song to expand it: album art, album, year, and quick links',
-    'Open a match on Spotify, Apple Music, SoundCloud, or the web',
-    'Export and import your history as a file, or clear it all at once',
-    'Album art is saved with each song, so your history works offline',
-    'New Settings: listening duration, G2/Phone mic, and Auto-Listen on open',
-    'Smoother listening waveform on the glasses',
-    'Tap the version number anytime to see what changed',
+    'Album art now shows on your glasses, using the copy saved with each song',
+    "Tidied up this What's New card so it reads more comfortably",
   ],
 }
